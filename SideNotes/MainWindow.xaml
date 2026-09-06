@@ -27,6 +27,7 @@
                 <TextBox x:Name="TitleTextBox"
                      Text="Mercado"
                      FontSize="12"
+                     TextWrapping="NoWrap"
                      FontWeight="Bold"
                      Foreground="#1E3A34"
                      Background="Transparent"
@@ -88,7 +89,7 @@
             
             <ListBox x:Name="NotesList"
                      DisplayMemberPath="Title"
-                     Height="180"
+                     Height="300"
                      Width="72"
                      SelectionChanged="NotesList_SelectionChanged"
                      Background="#D8F0E5"
@@ -97,12 +98,14 @@
                 
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
+                        <Setter Property="Height" Value="72"/>
+                        <Setter Property="Width" Value="64"/>
                         <Setter Property="Margin" Value="0,4"/>
-                        <Setter Property="Padding" Value="6"/>
+                        <Setter Property="Padding" Value="0"/>
                         <Setter Property="Background" Value="{Binding Color}"/>
                         <Setter Property="Foreground" Value="#1E3A34"/>
-                        <Setter Property="HorizontalContentAlignment"
-                                Value="Center"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
                         
                         <Setter Property="Template">
                             <Setter.Value>
@@ -112,7 +115,13 @@
                                             Padding="6">
                                         <ContentPresenter
                                             HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"/>
+                                            VerticalAlignment="Center">
+                                            
+                                            <ContentPresenter.LayoutTransform>
+                                                <RotateTransform Angle="-90"/>
+                                            </ContentPresenter.LayoutTransform>
+                                            
+                                        </ContentPresenter>
                                     </Border>
                                 </ControlTemplate>
                             </Setter.Value>
