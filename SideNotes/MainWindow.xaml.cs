@@ -17,10 +17,16 @@ namespace SideNotes
     /// </summary>
     public partial class MainWindow : Window
     {
-        private List<Note> notes = new List<Note>();
+        private List<Note> notes = NoteStorage.Load();
         public MainWindow()
         {
             InitializeComponent();
+            foreach (Note note in notes)
+            {
+                NotesList.Items.Add(note);
+            }
+            
+            NotesCountText.Text =  $"Notas salvas: {notes.Count}";
 
             Left = SystemParameters.WorkArea.Right - Width;
             Top = SystemParameters.WorkArea.Top;
@@ -34,6 +40,8 @@ namespace SideNotes
             };
 
             notes.Add(note);
+            
+            NoteStorage.Save(notes);
 
             NotesList.Items.Add(note);
 
@@ -56,6 +64,7 @@ namespace SideNotes
             {
                 selectedNote.Title = TitleTextBox.Text;
                 selectedNote.Content = ContentTextBox.Text;
+                NoteStorage.Save(notes);
 
                 NotesList.Items.Refresh();
             }
@@ -67,6 +76,7 @@ namespace SideNotes
             {
                 notes.Remove(selectedNote);
                 NotesList.Items.Remove(selectedNote);
+                NoteStorage.Save(notes);
 
                 TitleTextBox.Text = "";
                 ContentTextBox.Text = "";
