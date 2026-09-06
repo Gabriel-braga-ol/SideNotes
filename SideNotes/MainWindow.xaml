@@ -116,7 +116,8 @@
                          SelectionChanged="NotesList_SelectionChanged"
                          Background="#D8F0E5"
                          BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         PreviewMouseLeftButtonUp="NotesList_PreviewMouseLeftButtonUp">
                 
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">

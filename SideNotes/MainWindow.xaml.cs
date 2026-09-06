@@ -12,9 +12,7 @@ using System.Collections.Generic;
 
 namespace SideNotes
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+    
     public partial class MainWindow : Window
     {
         private readonly string[] noteColors =
@@ -42,23 +40,25 @@ namespace SideNotes
         }
         private void AddNote_Click(object sender, RoutedEventArgs e)
         {
+            SaveNote_Click(sender, e);
+            
             Note note = new Note
             {
-                Title = TitleTextBox.Text,
-                Content = ContentTextBox.Text,
+                Title = $"Nova nota {notes.Count + 1}",
+                Content = "",
                 Color = noteColors[notes.Count % noteColors.Length]
             };
 
             notes.Add(note);
+            NotesList.Items.Add(note);
             
+            NotesList.SelectedItem = note;
+            NotesList.ScrollIntoView(note);
+
             NoteStorage.Save(notes);
 
-            NotesList.Items.Add(note);
-
-            TitleTextBox.Text = $"Nova nota {notes.Count + 1}";
-            ContentTextBox.Text = "";
-
             NotesCountText.Text = $"Notas salvas: {notes.Count}";
+            TitleTextBox.Focus();
         }
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -66,6 +66,7 @@ namespace SideNotes
             {
                 TitleTextBox.Text = selectedNote.Title;
                 ContentTextBox.Text = selectedNote.Content;
+                NotePanel.Background = (Brush)new  BrushConverter().ConvertFromString(selectedNote.Color);
             }
         }
         private void SaveNote_Click(object sender, RoutedEventArgs e)
@@ -112,6 +113,24 @@ namespace SideNotes
                 TogglePanelButton.Content = "▶";
                 Width = 320;
                 Left = SystemParameters.WorkArea.Right - Width;
+            }
+        }
+
+        private void NotesList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is DependencyObject clickedElement)
+            {
+                var item = ItemsControl.ContainerFromElement(NotesList, clickedElement);
+
+                if (item is ListBoxItem && isPanelCollapsed)
+                {
+                    isPanelCollapsed = false;
+                    NotePanel.Visibility = Visibility.Visible;
+                    TogglePanelButton.Content = "▶";
+
+                    Width = 320;
+                    Left = SystemParameters.WorkArea.Right - Width;
+                }
             }
         }
     }
