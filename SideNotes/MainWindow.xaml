@@ -14,7 +14,12 @@
         Background="Transparent"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid Background="Transparent">
-        <Border Background="#B8E6D0"
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="80"/>
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0"
+                Background="#B8E6D0"
                 CornerRadius="18"
                 Margin="8"
                 Padding="16">
@@ -44,12 +49,6 @@
                          Foreground="#52756B"
                          FontSize="12"
                          Margin="0,4,0,12"/>
-
-                <ListBox x:Name="NotesList"
-                         DisplayMemberPath="Title"
-                         Height="80"
-                         Margin="0,0,0,12"
-                         SelectionChanged="NotesList_SelectionChanged"/>
                 
                 <Button Content="Salvar alterações"
                         Height="32"
@@ -83,10 +82,45 @@
                 </Button>
             </StackPanel>
         </Border>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="199*"/>
-            <ColumnDefinition/>
-        </Grid.ColumnDefinitions>
+        <Border Grid.Column="1"
+                Background="Transparent"
+                Margin="0,8,8,8">
+            
+            <ListBox x:Name="NotesList"
+                     DisplayMemberPath="Title"
+                     Height="180"
+                     Width="72"
+                     SelectionChanged="NotesList_SelectionChanged"
+                     Background="#D8F0E5"
+                     BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Margin" Value="0,4"/>
+                        <Setter Property="Padding" Value="6"/>
+                        <Setter Property="Background" Value="{Binding Color}"/>
+                        <Setter Property="Foreground" Value="#1E3A34"/>
+                        <Setter Property="HorizontalContentAlignment"
+                                Value="Center"/>
+                        
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="12"
+                                            Padding="6">
+                                        <ContentPresenter
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </Border>
 
     </Grid>
 </Window>

@@ -17,6 +17,15 @@ namespace SideNotes
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly string[] noteColors =
+        {
+            "#B8E6D0",
+            "#F7D794",
+            "#D8C4F1",
+            "#F3B3B3",
+            "#A8D8EA"
+        };
+        
         private List<Note> notes = NoteStorage.Load();
         public MainWindow()
         {
@@ -36,7 +45,8 @@ namespace SideNotes
             Note note = new Note
             {
                 Title = TitleTextBox.Text,
-                Content = ContentTextBox.Text
+                Content = ContentTextBox.Text,
+                Color = noteColors[notes.Count % noteColors.Length]
             };
 
             notes.Add(note);
