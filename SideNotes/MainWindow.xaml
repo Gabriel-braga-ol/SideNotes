@@ -18,40 +18,53 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="80"/>
         </Grid.ColumnDefinitions>
-        <Border Grid.Column="0"
+        <Border x:Name="NotePanel"
+                Grid.Column="0"
                 Background="#B8E6D0"
                 CornerRadius="18"
                 Margin="8"
                 Padding="16">
-            <StackPanel>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
                 <TextBox x:Name="TitleTextBox"
-                     Text="Mercado"
-                     FontSize="12"
-                     TextWrapping="NoWrap"
-                     FontWeight="Bold"
-                     Foreground="#1E3A34"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     Margin="0,0,0,12"/>
+                         Grid.Row="0"
+                         Text="Mercado"
+                         FontSize="12"
+                         TextWrapping="NoWrap"
+                         FontWeight="Bold"
+                         Foreground="#1E3A34"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="0,0,0,12"/>
 
                 <TextBox x:Name="ContentTextBox"
-                     Text="- apple&#10;- 4x banana&#10;- dry fruits"
-                     FontSize="17"
-                     Foreground="#31544B"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     VerticalContentAlignment="Top"
-                     MinHeight="300"/>
+                         Grid.Row="1"
+                         Text="- apple&#10;- 4x banana&#10;- dry fruits"
+                         FontSize="17"
+                         Foreground="#31544B"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalContentAlignment="Top"
+                         VerticalScrollBarVisibility="Auto"/>
 
                 <TextBlock x:Name="NotesCountText"
+                           Grid.Row="2"
                          Text="Notas: 0"
                          Foreground="#52756B"
                          FontSize="12"
                          Margin="0,4,0,12"/>
                 
                 <Button Content="Salvar alterações"
+                        Grid.Row="3"
                         Height="32"
                         Width="100"
                         HorizontalAlignment="Left"
@@ -59,6 +72,7 @@
                         Click="SaveNote_Click"/>
 
                 <Button Content="+"
+                        Grid.Row="4"
                         Width="40"
                         Height="40"
                         FontSize="24"
@@ -81,54 +95,61 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-            </StackPanel>
+            </Grid>
         </Border>
         <Border Grid.Column="1"
                 Background="Transparent"
                 Margin="0,8,8,8">
-            
-            <ListBox x:Name="NotesList"
-                     DisplayMemberPath="Title"
-                     Height="300"
-                     Width="72"
-                     SelectionChanged="NotesList_SelectionChanged"
-                     Background="#D8F0E5"
-                     BorderThickness="0"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <Button x:Name="TogglePanelButton"
+                        Content="▶"
+                        Width="32"
+                        Height="32"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,8"
+                        Click="TogglePanel_Click"/>
                 
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Height" Value="72"/>
-                        <Setter Property="Width" Value="64"/>
-                        <Setter Property="Margin" Value="0,4"/>
-                        <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Background" Value="{Binding Color}"/>
-                        <Setter Property="Foreground" Value="#1E3A34"/>
-                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                        <Setter Property="VerticalAlignment" Value="Center"/>
-                        
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ListBoxItem">
-                                    <Border Background="{TemplateBinding Background}"
-                                            CornerRadius="12"
-                                            Padding="6">
-                                        <ContentPresenter
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center">
-                                            
-                                            <ContentPresenter.LayoutTransform>
-                                                <RotateTransform Angle="-90"/>
-                                            </ContentPresenter.LayoutTransform>
-                                            
-                                        </ContentPresenter>
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-            </ListBox>
+                <ListBox x:Name="NotesList"
+                         DisplayMemberPath="Title"
+                         Height="300"
+                         Width="72"
+                         SelectionChanged="NotesList_SelectionChanged"
+                         Background="#D8F0E5"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Height" Value="72"/>
+                            <Setter Property="Margin" Value="0,4"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Background" Value="{Binding Color}"/>
+                            <Setter Property="Foreground" Value="#1E3A34"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="12"
+                                                Padding="6">
+                                            <ContentPresenter
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                                
+                                                <ContentPresenter.LayoutTransform>
+                                                    <RotateTransform Angle="-90"/>
+                                                </ContentPresenter.LayoutTransform>
+                                            </ContentPresenter>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </StackPanel>
         </Border>
 
     </Grid>

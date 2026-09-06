@@ -93,5 +93,26 @@ namespace SideNotes
                 NotesCountText.Text = $"Notas salvas: {notes.Count}";
             }
         }
+        private bool isPanelCollapsed = false;
+
+        private void TogglePanel_Click(object sender, RoutedEventArgs e)
+        {
+            isPanelCollapsed = !isPanelCollapsed;
+
+            if (isPanelCollapsed)
+            {
+                NotePanel.Visibility = Visibility.Collapsed;
+                TogglePanelButton.Content = "◀";
+                Width = 100;
+                Left = SystemParameters.WorkArea.Right - Width;
+            }
+            else
+            {
+                NotePanel.Visibility = Visibility.Visible;
+                TogglePanelButton.Content = "▶";
+                Width = 320;
+                Left = SystemParameters.WorkArea.Right - Width;
+            }
+        }
     }
 }
