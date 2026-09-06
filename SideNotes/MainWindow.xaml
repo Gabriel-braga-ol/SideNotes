@@ -1,0 +1,92 @@
+﻿<Window x:Class="SideNotes.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SideNotes"
+        mc:Ignorable="d"
+        Title="SideNotes"
+        Height="600"
+        Width="320"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Grid Background="Transparent">
+        <Border Background="#B8E6D0"
+                CornerRadius="18"
+                Margin="8"
+                Padding="16">
+            <StackPanel>
+                <TextBox x:Name="TitleTextBox"
+                     Text="Mercado"
+                     FontSize="12"
+                     FontWeight="Bold"
+                     Foreground="#1E3A34"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Margin="0,0,0,12"/>
+
+                <TextBox x:Name="ContentTextBox"
+                     Text="- apple&#10;- 4x banana&#10;- dry fruits"
+                     FontSize="17"
+                     Foreground="#31544B"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalContentAlignment="Top"
+                     MinHeight="300"/>
+
+                <TextBlock x:Name="NotesCountText"
+                         Text="Notas: 0"
+                         Foreground="#52756B"
+                         FontSize="12"
+                         Margin="0,4,0,12"/>
+
+                <ListBox x:Name="NotesList"
+                         DisplayMemberPath="Title"
+                         Height="80"
+                         Margin="0,0,0,12"
+                         SelectionChanged="NotesList_SelectionChanged"/>
+                
+                <Button Content="Salvar alterações"
+                        Height="32"
+                        Width="100"
+                        HorizontalAlignment="Left"
+                        Margin="0,8,0,0"
+                        Click="SaveNote_Click"/>
+
+                <Button Content="+"
+                        Width="40"
+                        Height="40"
+                        FontSize="24"
+                        Foreground="#1E3A34"
+                        Background="#EAF6F0"
+                        BorderThickness="0"
+                        Padding="0"
+                        HorizontalAlignment="Right"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Margin="0,1,0,0"
+                        Click="AddNote_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="21">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </Border>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="199*"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+
+    </Grid>
+</Window>
