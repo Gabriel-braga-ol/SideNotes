@@ -9,6 +9,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace SideNotes
 {
@@ -140,6 +141,17 @@ namespace SideNotes
                     Width = 320;
                     Left = SystemParameters.WorkArea.Right - Width;
                 }
+            }
+        }
+
+        private void Window_Closing(object? sender, CancelEventArgs e)
+        {
+            if (NotesList.SelectedItem is Note selectedNote)
+            {
+                selectedNote.Title = TitleTextBox.Text;
+                selectedNote.Content = ContentTextBox.Text;
+                
+                NoteStorage.Save(notes);
             }
         }
     }
