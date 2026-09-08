@@ -62,11 +62,20 @@ namespace SideNotes
         }
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && notes.Contains(previousNote))
+            {
+                previousNote.Title = TitleTextBox.Text;
+                previousNote.Content = ContentTextBox.Text;
+
+                NoteStorage.Save(notes);
+            }
+
             if (NotesList.SelectedItem is Note selectedNote)
             {
                 TitleTextBox.Text = selectedNote.Title;
                 ContentTextBox.Text = selectedNote.Content;
-                NotePanel.Background = (Brush)new  BrushConverter().ConvertFromString(selectedNote.Color);
+                
+                NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
             }
         }
         private void SaveNote_Click(object sender, RoutedEventArgs e)
