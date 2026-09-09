@@ -157,23 +157,21 @@ namespace SideNotes
             {
                 NoteStorage.Save(notes);
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception ex) when (
+                ex is IOException || ex is UnauthorizedAccessException)
             {
-                e.Cancel = true;
+                MessageBoxResult answer = MessageBox.Show(
+                    this,
+                    "Não foi possível salvar as notas. \n\n" +
+                    "Deseja fechar mesmo assim? " +
+                    "As alterações não rgavadas serão perdidas.", "Falha ao salvar", 
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No);
 
-                MessageBox.Show(
-                    "Não foi possível salvar por falta de permisão. " +
-                    "A janela continuará aberta para preservar suas edições.", "Sidenotes");
+                e.Cancel = answer != MessageBoxResult.Yes;
             }
-            catch (IOException)
-            {
-                e.Cancel = true;
-
-                MessageBox.Show(
-                    "Não foi possível gravar o arquivo de notas. " +
-                    "Verifique o espaço em disco e se o arquivo está em uso. " +
-                    "A janela continuará aberta para você tentar novamente.", "SideNotes");
-            }
+            
         }
     }
 }
