@@ -11,6 +11,7 @@ using System.Windows.Shapes;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Windows.Threading;
 
 namespace SideNotes
 {
@@ -57,7 +58,7 @@ namespace SideNotes
             NotesList.SelectedItem = note;
             NotesList.ScrollIntoView(note);
 
-            NoteStorage.Save(notes);
+            TrySaveNotes();
 
             NotesCountText.Text = $"Notas salvas: {notes.Count}";
             TitleTextBox.Focus();
@@ -69,22 +70,7 @@ namespace SideNotes
                 previousNote.Title = TitleTextBox.Text;
                 previousNote.Content = ContentTextBox.Text;
 
-                try
-                {
-                    NoteStorage.Save(notes);
-                }
-                catch (Exception ex) when (
-                    ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    MessageBox.Show(
-                        this,
-                        "Não foi possível salvar as notas no arquivo.\n\n" +
-                        "Sua edição continua na memória enquanto o aplicativo " +
-                        "estiver aberto. Tente salvar novamente.",
-                        "Falha ao salvar",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                }
+                TrySaveNotes();
             }
             
 
@@ -102,23 +88,8 @@ namespace SideNotes
             {
                 selectedNote.Title = TitleTextBox.Text;
                 selectedNote.Content = ContentTextBox.Text;
-                
-                try
-                {
-                    NoteStorage.Save(notes);
-                }
-                catch (Exception ex) when (
-                    ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    MessageBox.Show(
-                        this,
-                        "Não foi possível salvar as notas no arquivo.\n\n" +
-                        "Sua edição continua na memória. " +
-                        "Mantenha o aplicativo aberto e tente salvar novamente.",
-                        "Falha ao salvar",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                }
+
+                TrySaveNotes();
 
                 NotesList.Items.Refresh();
             }
@@ -130,7 +101,7 @@ namespace SideNotes
             {
                 notes.Remove(selectedNote);
                 NotesList.Items.Remove(selectedNote);
-                NoteStorage.Save(notes);
+                TrySaveNotes();
 
                 TitleTextBox.Text = "";
                 ContentTextBox.Text = "";
@@ -203,7 +174,28 @@ namespace SideNotes
 
                 e.Cancel = answer != MessageBoxResult.Yes;
             }
-            
+        }
+        private bool TrySaveNotes()
+        {
+            try
+            {
+                NoteStorage.Save(notes);
+                return true;
+            }
+            catch (Exception ex) when (
+                ex is IOException || ex is UnauthorizedAccessException)
+            {
+                MessageBox.Show(
+                    this,
+                    "Não foi possível salvar as notas no arquivo.\n\n" +
+                    "Sua edição continua na memória. " +
+                    "Mantenha o aplicativo aberto e tente salvar novamente.",
+                    "Falha ao salvar",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
         }
     }
 }
