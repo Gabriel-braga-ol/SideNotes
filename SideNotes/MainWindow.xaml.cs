@@ -31,6 +31,11 @@ namespace SideNotes
         public MainWindow()
         {
             InitializeComponent();
+            autoSaveTimer.Tick += AutoSaveTimer_Tick;
+            
+            TitleTextBox.TextChanged += NoteTextChanged;
+            ContentTextBox.TextChanged += NoteTextChanged;
+            
             foreach (Note note in notes)
             {
                 NotesList.Items.Add(note);
@@ -65,6 +70,8 @@ namespace SideNotes
         }
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            autoSaveTimer.Stop();
+            
             if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && notes.Contains(previousNote))
             {
                 previousNote.Title = TitleTextBox.Text;
@@ -76,10 +83,19 @@ namespace SideNotes
 
             if (NotesList.SelectedItem is Note selectedNote)
             {
-                TitleTextBox.Text = selectedNote.Title;
-                ContentTextBox.Text = selectedNote.Content;
-                
-                NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
+                isLoadingNote = true;
+
+                try
+                {
+                    TitleTextBox.Text = selectedNote.Title;
+                    ContentTextBox.Text = selectedNote.Content;
+
+                    NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
+                }
+                finally
+                {
+                    isLoadingNote = false;
+                }
             }
         }
         private void SaveNote_Click(object sender, RoutedEventArgs e)
@@ -196,6 +212,43 @@ namespace SideNotes
 
                 return false;
             }
+        }
+
+        private readonly DispatcherTimer autoSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+
+        private bool isLoadingNote = false;
+
+        private void AutoSaveTimer_Tick(object? sender, EventArgs e)
+        {
+            autoSaveTimer.Stop();
+
+            if (isLoadingNote)
+            {
+                return;
+            }
+
+            if (NotesList.SelectedItem is Note selectedNote)
+            {
+                selectedNote.Title = TitleTextBox.Text;
+                selectedNote.Content = ContentTextBox.Text;
+
+                TrySaveNotes();
+            }
+        }
+
+        private void NoteTextChanged(object sender, TextChangedEventArgs e)
+        {
+            autoSaveTimer.Stop();
+
+            if (isLoadingNote || NotesList.SelectedItem is not Note)
+            {
+                return;
+            }
+            
+            autoSaveTimer.Start();
         }
     }
 }
