@@ -10,6 +10,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 
 namespace SideNotes
 {
@@ -150,8 +151,28 @@ namespace SideNotes
             {
                 selectedNote.Title = TitleTextBox.Text;
                 selectedNote.Content = ContentTextBox.Text;
-                
+            }
+
+            try
+            {
                 NoteStorage.Save(notes);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                e.Cancel = true;
+
+                MessageBox.Show(
+                    "Não foi possível salvar por falta de permisão. " +
+                    "A janela continuará aberta para preservar suas edições.", "Sidenotes");
+            }
+            catch (IOException)
+            {
+                e.Cancel = true;
+
+                MessageBox.Show(
+                    "Não foi possível gravar o arquivo de notas. " +
+                    "Verifique o espaço em disco e se o arquivo está em uso. " +
+                    "A janela continuará aberta para você tentar novamente.", "SideNotes");
             }
         }
     }
