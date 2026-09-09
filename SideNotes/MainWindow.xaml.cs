@@ -69,8 +69,24 @@ namespace SideNotes
                 previousNote.Title = TitleTextBox.Text;
                 previousNote.Content = ContentTextBox.Text;
 
-                NoteStorage.Save(notes);
+                try
+                {
+                    NoteStorage.Save(notes);
+                }
+                catch (Exception ex) when (
+                    ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    MessageBox.Show(
+                        this,
+                        "Não foi possível salvar as notas no arquivo.\n\n" +
+                        "Sua edição continua na memória enquanto o aplicativo " +
+                        "estiver aberto. Tente salvar novamente.",
+                        "Falha ao salvar",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
             }
+            
 
             if (NotesList.SelectedItem is Note selectedNote)
             {
