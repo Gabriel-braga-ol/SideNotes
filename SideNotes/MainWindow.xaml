@@ -36,7 +36,7 @@
                 
                 <TextBox x:Name="TitleTextBox"
                          Grid.Row="0"
-                         Text="Mercado"
+                         Text="{Binding SelectedNote.Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue='', FallbackValue=''}"
                          FontSize="12"
                          TextWrapping="NoWrap"
                          FontWeight="Bold"
@@ -47,7 +47,7 @@
 
                 <TextBox x:Name="ContentTextBox"
                          Grid.Row="1"
-                         Text="- apple&#10;- 4x banana&#10;- dry fruits"
+                         Text="{Binding SelectedNote.Content, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue='', FallbackValue=''}"
                          FontSize="17"
                          Foreground="#31544B"
                          Background="Transparent"
@@ -119,7 +119,8 @@
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          PreviewMouseLeftButtonUp="NotesList_PreviewMouseLeftButtonUp"
-                         ItemsSource="{Binding Notes}">
+                         ItemsSource="{Binding Notes}"
+                         SelectedItem="{Binding SelectedNote, Mode=TwoWay}">
                 
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">

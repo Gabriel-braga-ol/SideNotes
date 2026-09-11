@@ -1,8 +1,9 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace SideNotes
 {
-    public class MainViewModel
+    public class MainViewModel : INotifyPropertyChanged
     {
         private readonly string[] noteColors =
         {
@@ -32,6 +33,28 @@ namespace SideNotes
 
             return note;
         }
+        
+        private Note? selectedNote;
+
+        public Note? SelectedNote
+        {
+            get => selectedNote;
+            set
+            {
+                if (selectedNote == value)
+                {
+                    return;
+                }
+
+                selectedNote = value;
+
+                PropertyChanged?.Invoke(
+                    this,
+                    new PropertyChangedEventArgs(nameof(SelectedNote)));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }
 

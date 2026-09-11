@@ -40,7 +40,7 @@ namespace SideNotes
 
             Note note = viewModel.CreateNote();
 
-            NotesList.SelectedItem = note;
+            viewModel.SelectedNote = note;
             NotesList.ScrollIntoView(note);
 
             TrySaveNotes();
@@ -53,28 +53,12 @@ namespace SideNotes
             
             if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && viewModel.Notes.Contains(previousNote))
             {
-                previousNote.Title = TitleTextBox.Text;
-                previousNote.Content = ContentTextBox.Text;
-
                 TrySaveNotes();
             }
             
-
             if (NotesList.SelectedItem is Note selectedNote)
             {
-                isLoadingNote = true;
-
-                try
-                {
-                    TitleTextBox.Text = selectedNote.Title;
-                    ContentTextBox.Text = selectedNote.Content;
-
-                    NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
-                }
-                finally
-                {
-                    isLoadingNote = false;
-                }
+                NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
             }
         }
         private void SaveNote_Click(object sender, RoutedEventArgs e)
@@ -84,13 +68,10 @@ namespace SideNotes
 
         private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && NotesList.SelectedItem is Note selectedNote)
+            if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && viewModel.SelectedNote is Note selectedNote)
             {
                 viewModel.Notes.Remove(selectedNote);
                 TrySaveNotes();
-
-                TitleTextBox.Text = "";
-                ContentTextBox.Text = "";
             }
         }
         private bool isPanelCollapsed = false;
@@ -135,12 +116,6 @@ namespace SideNotes
 
         private void Window_Closing(object? sender, CancelEventArgs e)
         {
-            if (NotesList.SelectedItem is Note selectedNote)
-            {
-                selectedNote.Title = TitleTextBox.Text;
-                selectedNote.Content = ContentTextBox.Text;
-            }
-
             try
             {
                 NoteStorage.Save(viewModel.Notes.ToList());
@@ -188,17 +163,9 @@ namespace SideNotes
             Interval = TimeSpan.FromSeconds(1)
         };
 
-        private bool isLoadingNote = false;
-
         private void AutoSaveTimer_Tick(object? sender, EventArgs e)
         {
             autoSaveTimer.Stop();
-
-            if (isLoadingNote)
-            {
-                return;
-            }
-
             SaveCurrentNote();
         }
 
@@ -206,7 +173,7 @@ namespace SideNotes
         {
             autoSaveTimer.Stop();
 
-            if (isLoadingNote || NotesList.SelectedItem is not Note)
+            if (viewModel.SelectedNote is null)
             {
                 return;
             }
@@ -216,11 +183,10 @@ namespace SideNotes
 
         private void SaveCurrentNote()
         {
-            if (NotesList.SelectedItem is Note selectedNote)
+            autoSaveTimer.Stop();
+            
+            if (viewModel.SelectedNote is not null)
             {
-                selectedNote.Title = TitleTextBox.Text;
-                selectedNote.Content = ContentTextBox.Text;
-
                 TrySaveNotes();
             }
         }
