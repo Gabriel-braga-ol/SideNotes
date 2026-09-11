@@ -12,22 +12,15 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Threading;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace SideNotes
 {
     
     public partial class MainWindow : Window
     {
-        private readonly string[] noteColors =
-        {
-            "#B8E6D0",
-            "#F7D794",
-            "#D8C4F1",
-            "#F3B3B3",
-            "#A8D8EA"
-        };
-        
-        private List<Note> notes = NoteStorage.Load();
+        private readonly MainViewModel viewModel = new MainViewModel();
         public MainWindow()
         {
             InitializeComponent();
@@ -36,43 +29,29 @@ namespace SideNotes
             TitleTextBox.TextChanged += NoteTextChanged;
             ContentTextBox.TextChanged += NoteTextChanged;
             
-            foreach (Note note in notes)
-            {
-                NotesList.Items.Add(note);
-            }
-            
-            NotesCountText.Text =  $"Notas salvas: {notes.Count}";
+            DataContext = viewModel;
 
             Left = SystemParameters.WorkArea.Right - Width;
             Top = SystemParameters.WorkArea.Top;
         }
         private void AddNote_Click(object sender, RoutedEventArgs e)
         {
-            SaveNote_Click(sender, e);
-            
-            Note note = new Note
-            {
-                Title = $"Nova nota {notes.Count + 1}",
-                Content = "",
-                Color = noteColors[notes.Count % noteColors.Length]
-            };
+            SaveCurrentNote();
 
-            notes.Add(note);
-            NotesList.Items.Add(note);
-            
+            Note note = viewModel.CreateNote();
+
             NotesList.SelectedItem = note;
             NotesList.ScrollIntoView(note);
 
             TrySaveNotes();
 
-            NotesCountText.Text = $"Notas salvas: {notes.Count}";
             TitleTextBox.Focus();
         }
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             autoSaveTimer.Stop();
             
-            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && notes.Contains(previousNote))
+            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && viewModel.Notes.Contains(previousNote))
             {
                 previousNote.Title = TitleTextBox.Text;
                 previousNote.Content = ContentTextBox.Text;
@@ -100,28 +79,18 @@ namespace SideNotes
         }
         private void SaveNote_Click(object sender, RoutedEventArgs e)
         {
-            if (NotesList.SelectedItem is Note selectedNote)
-            {
-                selectedNote.Title = TitleTextBox.Text;
-                selectedNote.Content = ContentTextBox.Text;
-
-                TrySaveNotes();
-
-                NotesList.Items.Refresh();
-            }
+            SaveCurrentNote();
         }
 
         private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && NotesList.SelectedItem is Note selectedNote)
             {
-                notes.Remove(selectedNote);
-                NotesList.Items.Remove(selectedNote);
+                viewModel.Notes.Remove(selectedNote);
                 TrySaveNotes();
 
                 TitleTextBox.Text = "";
                 ContentTextBox.Text = "";
-                NotesCountText.Text = $"Notas salvas: {notes.Count}";
             }
         }
         private bool isPanelCollapsed = false;
@@ -174,7 +143,7 @@ namespace SideNotes
 
             try
             {
-                NoteStorage.Save(notes);
+                NoteStorage.Save(viewModel.Notes.ToList());
             }
             catch (Exception ex) when (
                 ex is IOException || ex is UnauthorizedAccessException)
@@ -195,7 +164,7 @@ namespace SideNotes
         {
             try
             {
-                NoteStorage.Save(notes);
+                NoteStorage.Save(viewModel.Notes.ToList());
                 return true;
             }
             catch (Exception ex) when (
@@ -230,13 +199,7 @@ namespace SideNotes
                 return;
             }
 
-            if (NotesList.SelectedItem is Note selectedNote)
-            {
-                selectedNote.Title = TitleTextBox.Text;
-                selectedNote.Content = ContentTextBox.Text;
-
-                TrySaveNotes();
-            }
+            SaveCurrentNote();
         }
 
         private void NoteTextChanged(object sender, TextChangedEventArgs e)
@@ -249,6 +212,17 @@ namespace SideNotes
             }
             
             autoSaveTimer.Start();
+        }
+
+        private void SaveCurrentNote()
+        {
+            if (NotesList.SelectedItem is Note selectedNote)
+            {
+                selectedNote.Title = TitleTextBox.Text;
+                selectedNote.Content = ContentTextBox.Text;
+
+                TrySaveNotes();
+            }
         }
     }
 }

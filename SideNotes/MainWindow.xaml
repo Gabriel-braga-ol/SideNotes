@@ -59,10 +59,10 @@
 
                 <TextBlock x:Name="NotesCountText"
                            Grid.Row="2"
-                         Text="Notas: 0"
-                         Foreground="#52756B"
-                         FontSize="12"
-                         Margin="0,4,0,12"/>
+                           Text="{Binding Notes.Count, StringFormat='Notas: {0}'}"
+                           Foreground="#52756B"
+                           FontSize="12"
+                           Margin="0,4,0,12"/>
                 
                 <Button Content="Salvar alterações"
                         Grid.Row="3"
@@ -118,7 +118,8 @@
                          Background="#D8F0E5"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         PreviewMouseLeftButtonUp="NotesList_PreviewMouseLeftButtonUp">
+                         PreviewMouseLeftButtonUp="NotesList_PreviewMouseLeftButtonUp"
+                         ItemsSource="{Binding Notes}">
                 
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
