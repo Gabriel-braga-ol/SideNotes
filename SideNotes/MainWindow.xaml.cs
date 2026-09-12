@@ -24,9 +24,9 @@ namespace SideNotes
         public MainWindow()
         {
             InitializeComponent();
-            autoSaveTimer.Tick += AutoSaveTimer_Tick;
-            
-            viewModel.SelectedNoteEdited += ViewModel_SelectedNoteEdited;
+
+            viewModel.AutoSaveFailed += ViewModel_AutoSaveFailed;
+            Closed += MainWindow_Closed;
             
             DataContext = viewModel;
 
@@ -48,8 +48,6 @@ namespace SideNotes
         }
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            autoSaveTimer.Stop();
-            
             if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && viewModel.Notes.Contains(previousNote))
             {
                 TrySaveNotes();
@@ -156,26 +154,28 @@ namespace SideNotes
             Interval = TimeSpan.FromSeconds(1)
         };
 
-        private void AutoSaveTimer_Tick(object? sender, EventArgs e)
-        {
-            autoSaveTimer.Stop();
-            SaveCurrentNote();
-        }
-
         private void SaveCurrentNote()
         {
-            autoSaveTimer.Stop();
-            
             if (viewModel.SelectedNote is not null)
             {
                 TrySaveNotes();
             }
         }
-        
-        private void ViewModel_SelectedNoteEdited(object? sender, EventArgs e)
+
+        private void ViewModel_AutoSaveFailed(string message)
         {
-            autoSaveTimer.Stop();
-            autoSaveTimer.Start();
+            MessageBox.Show(
+                this,
+                message,
+                "Falha ao salvar",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            viewModel.StopAutoSave();
+            viewModel.AutoSaveFailed -= ViewModel_AutoSaveFailed;
         }
     }
 }

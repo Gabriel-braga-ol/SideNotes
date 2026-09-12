@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.IO;
+using System.Windows.Threading;
 
 namespace SideNotes
 {
@@ -21,6 +22,7 @@ namespace SideNotes
         public MainViewModel()
         {
             Notes = new ObservableCollection<Note>(NoteStorage.Load());
+            autoSaveTimer.Tick += AutoSaveTimer_Tick;
         }
         
         public Note CreateNote()
@@ -48,6 +50,8 @@ namespace SideNotes
                 {
                     return;
                 }
+                
+                autoSaveTimer.Stop();
 
                 if (selectedNote is not null)
                 {
@@ -66,8 +70,6 @@ namespace SideNotes
                     new PropertyChangedEventArgs(nameof(SelectedNote)));
             }
         }
-        
-        public event EventHandler? SelectedNoteEdited;
 
         private void OnSelectedNotePropertyChanged(
             object? sender, PropertyChangedEventArgs e)
@@ -75,12 +77,14 @@ namespace SideNotes
             if (e.PropertyName == nameof(Note.Title) ||
                 e.PropertyName == nameof(Note.Content))
             {
-                SelectedNoteEdited?.Invoke(this, EventArgs.Empty);
+                autoSaveTimer.Stop();
+                autoSaveTimer.Start();
             }
         }
         
         public void SaveNotes()
         {
+            autoSaveTimer.Stop();
             NoteStorage.Save(Notes.ToList());
         }
 
@@ -101,6 +105,33 @@ namespace SideNotes
 
                 return false;
             }
+        }
+
+        private readonly DispatcherTimer autoSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+
+        public event Action<string>? AutoSaveFailed;
+
+        private void AutoSaveTimer_Tick(object? sender, EventArgs e)
+        {
+            autoSaveTimer.Stop();
+
+            if (SelectedNote is null)
+            {
+                return;
+            }
+
+            if (!TrySaveNotes(out string? errorMessage))
+            {
+                AutoSaveFailed?.Invoke(errorMessage ?? "Não foi possível salvar as notas.");
+            }
+        }
+        
+        public void StopAutoSave()
+        {
+            autoSaveTimer.Stop();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
