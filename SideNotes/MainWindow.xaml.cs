@@ -117,7 +117,7 @@ namespace SideNotes
         {
             try
             {
-                NoteStorage.Save(viewModel.Notes.ToList());
+                viewModel.SaveNotes();
             }
             catch (Exception ex) when (
                 ex is IOException || ex is UnauthorizedAccessException)
@@ -136,25 +136,19 @@ namespace SideNotes
         }
         private bool TrySaveNotes()
         {
-            try
-            {
-                NoteStorage.Save(viewModel.Notes.ToList());
-                return true;
-            }
-            catch (Exception ex) when (
-                ex is IOException || ex is UnauthorizedAccessException)
+            bool saved = viewModel.TrySaveNotes(out string? errorMessage);
+
+            if (!saved)
             {
                 MessageBox.Show(
                     this,
-                    "Não foi possível salvar as notas no arquivo.\n\n" +
-                    "Sua edição continua na memória. " +
-                    "Mantenha o aplicativo aberto e tente salvar novamente.",
+                    errorMessage ?? "Não foi possível salvar as notas.",
                     "Falha ao salvar",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
-
-                return false;
             }
+
+            return saved;
         }
 
         private readonly DispatcherTimer autoSaveTimer = new DispatcherTimer

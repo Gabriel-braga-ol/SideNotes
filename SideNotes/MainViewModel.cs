@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
+using System.IO;
 
 namespace SideNotes
 {
@@ -74,6 +76,30 @@ namespace SideNotes
                 e.PropertyName == nameof(Note.Content))
             {
                 SelectedNoteEdited?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        
+        public void SaveNotes()
+        {
+            NoteStorage.Save(Notes.ToList());
+        }
+
+        public bool TrySaveNotes(out string? errorMessage)
+        {
+            try
+            {
+                SaveNotes();
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                errorMessage =
+                    "Não foi possível salvar as notas no arquivo.\n\n" +
+                    "Suas alterações continuam na memória. " +
+                    "Mantenha o aplicativo aberto e tente salvar novamente.";
+
+                return false;
             }
         }
 
