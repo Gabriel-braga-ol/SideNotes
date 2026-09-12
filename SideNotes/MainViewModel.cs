@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -46,11 +47,33 @@ namespace SideNotes
                     return;
                 }
 
+                if (selectedNote is not null)
+                {
+                    selectedNote.PropertyChanged -= OnSelectedNotePropertyChanged;
+                }
+
                 selectedNote = value;
+
+                if (selectedNote is not null)
+                {
+                    selectedNote.PropertyChanged += OnSelectedNotePropertyChanged;
+                }
 
                 PropertyChanged?.Invoke(
                     this,
                     new PropertyChangedEventArgs(nameof(SelectedNote)));
+            }
+        }
+        
+        public event EventHandler? SelectedNoteEdited;
+
+        private void OnSelectedNotePropertyChanged(
+            object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(Note.Title) ||
+                e.PropertyName == nameof(Note.Content))
+            {
+                SelectedNoteEdited?.Invoke(this, EventArgs.Empty);
             }
         }
 

@@ -26,6 +26,8 @@ namespace SideNotes
             InitializeComponent();
             autoSaveTimer.Tick += AutoSaveTimer_Tick;
             
+            viewModel.SelectedNoteEdited += ViewModel_SelectedNoteEdited;
+            
             DataContext = viewModel;
 
             Left = SystemParameters.WorkArea.Right - Width;
@@ -47,16 +49,6 @@ namespace SideNotes
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             autoSaveTimer.Stop();
-            
-            foreach (Note note in e.RemovedItems)
-            {
-                note.PropertyChanged -= SelectedNote_PropertyChanged;
-            }
-
-            foreach (Note note in e.AddedItems)
-            {
-                note.PropertyChanged += SelectedNote_PropertyChanged;
-            }
             
             if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && viewModel.Notes.Contains(previousNote))
             {
@@ -185,15 +177,9 @@ namespace SideNotes
                 TrySaveNotes();
             }
         }
-
-        private void SelectedNote_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        
+        private void ViewModel_SelectedNoteEdited(object? sender, EventArgs e)
         {
-            if (e.PropertyName != nameof(Note.Title)
-                && e.PropertyName != nameof(Note.Content))
-            {
-                return;
-            }
-            
             autoSaveTimer.Stop();
             autoSaveTimer.Start();
         }
