@@ -25,7 +25,7 @@ namespace SideNotes
         {
             InitializeComponent();
 
-            viewModel.AutoSaveFailed += ViewModel_AutoSaveFailed;
+            viewModel.SaveFailed += ViewModel_SaveFailed;
             Closed += MainWindow_Closed;
             
             DataContext = viewModel;
@@ -48,11 +48,6 @@ namespace SideNotes
         }
         private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is Note previousNote && viewModel.Notes.Contains(previousNote))
-            {
-                TrySaveNotes();
-            }
-            
             if (NotesList.SelectedItem is Note selectedNote)
             {
                 NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
@@ -162,7 +157,7 @@ namespace SideNotes
             }
         }
 
-        private void ViewModel_AutoSaveFailed(string message)
+        private void ViewModel_SaveFailed(string message)
         {
             MessageBox.Show(
                 this,
@@ -175,7 +170,7 @@ namespace SideNotes
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
             viewModel.StopAutoSave();
-            viewModel.AutoSaveFailed -= ViewModel_AutoSaveFailed;
+            viewModel.SaveFailed -= ViewModel_SaveFailed;
         }
     }
 }

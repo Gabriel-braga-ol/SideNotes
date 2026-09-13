@@ -53,6 +53,15 @@ namespace SideNotes
                 
                 autoSaveTimer.Stop();
 
+                if (selectedNote is not null && Notes.Contains(selectedNote))
+                {
+                    if (!TrySaveNotes(out string? errorMessage))
+                    {
+                        SaveFailed?.Invoke(
+                            errorMessage ?? "Não foi possível salvar as notas.");
+                    }
+                }
+
                 if (selectedNote is not null)
                 {
                     selectedNote.PropertyChanged -= OnSelectedNotePropertyChanged;
@@ -112,7 +121,7 @@ namespace SideNotes
             Interval = TimeSpan.FromSeconds(1)
         };
 
-        public event Action<string>? AutoSaveFailed;
+        public event Action<string>? SaveFailed;
 
         private void AutoSaveTimer_Tick(object? sender, EventArgs e)
         {
@@ -125,7 +134,7 @@ namespace SideNotes
 
             if (!TrySaveNotes(out string? errorMessage))
             {
-                AutoSaveFailed?.Invoke(errorMessage ?? "Não foi possível salvar as notas.");
+                SaveFailed?.Invoke(errorMessage ?? "Não foi possível salvar as notas.");
             }
         }
         
