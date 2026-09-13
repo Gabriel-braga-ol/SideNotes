@@ -145,6 +145,22 @@ namespace SideNotes
             autoSaveTimer.Stop();
         }
 
+        public void DeleteSelectedNote()
+        {
+            if (SelectedNote is null)
+            {
+                return;
+            }
+            
+            Notes.Remove(SelectedNote);
+
+            if (!TrySaveNotes(out string? errorMessage))
+            {
+                SaveFailed?.Invoke(
+                    errorMessage ?? "Não foi psosível salvar as notas.");
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

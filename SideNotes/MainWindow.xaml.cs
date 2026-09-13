@@ -54,10 +54,9 @@ namespace SideNotes
 
         private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && viewModel.SelectedNote is Note selectedNote)
+            if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && viewModel.SelectedNote is not null)
             {
-                viewModel.Notes.Remove(selectedNote);
-                TrySaveNotes();
+                viewModel.DeleteSelectedNote();
             }
         }
         private bool isPanelCollapsed = false;
