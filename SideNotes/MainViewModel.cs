@@ -23,6 +23,8 @@ namespace SideNotes
         {
             Notes = new ObservableCollection<Note>(NoteStorage.Load());
             autoSaveTimer.Tick += AutoSaveTimer_Tick;
+            
+            SelectedNote = Notes.FirstOrDefault();
         }
         
         public Note CreateNote()

@@ -21,7 +21,9 @@
         </Grid.ColumnDefinitions>
         <Border x:Name="NotePanel"
                 Grid.Column="0"
-                Background="#B8E6D0"
+                Background="{Binding SelectedNote.Color,
+                     TargetNullValue=Transparent,
+                     FallbackValue=Transparent}"
                 CornerRadius="18"
                 Margin="8"
                 Padding="16">
@@ -114,7 +116,6 @@
                          DisplayMemberPath="Title"
                          Height="300"
                          Width="72"
-                         SelectionChanged="NotesList_SelectionChanged"
                          Background="#D8F0E5"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"

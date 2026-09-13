@@ -46,13 +46,7 @@ namespace SideNotes
 
             TitleTextBox.Focus();
         }
-        private void NotesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (NotesList.SelectedItem is Note selectedNote)
-            {
-                NotePanel.Background = (Brush)new BrushConverter().ConvertFromString(selectedNote.Color);
-            }
-        }
+        
         private void SaveNote_Click(object sender, RoutedEventArgs e)
         {
             SaveCurrentNote();
