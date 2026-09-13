@@ -35,14 +35,9 @@ namespace SideNotes
         }
         private void AddNote_Click(object sender, RoutedEventArgs e)
         {
-            SaveCurrentNote();
-
             Note note = viewModel.CreateNote();
-
-            viewModel.SelectedNote = note;
+            
             NotesList.ScrollIntoView(note);
-
-            TrySaveNotes();
 
             TitleTextBox.Focus();
         }

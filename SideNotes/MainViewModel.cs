@@ -37,6 +37,13 @@ namespace SideNotes
             };
 
             Notes.Add(note);
+            SelectedNote = note;
+
+            if (!TrySaveNotes(out string? errorMessage))
+            {
+                SaveFailed?.Invoke(
+                    errorMessage ?? "Não foi psosível salvar as notas.");
+            }
 
             return note;
         }
