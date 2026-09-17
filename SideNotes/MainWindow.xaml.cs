@@ -11,7 +11,6 @@ using System.Windows.Shapes;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Windows.Threading;
 using System.Collections.ObjectModel;
 using System.Linq;
 
@@ -58,22 +57,7 @@ namespace SideNotes
 
         private void TogglePanel_Click(object sender, RoutedEventArgs e)
         {
-            isPanelCollapsed = !isPanelCollapsed;
-
-            if (isPanelCollapsed)
-            {
-                NotePanel.Visibility = Visibility.Collapsed;
-                TogglePanelButton.Content = "◀";
-                Width = 100;
-                Left = SystemParameters.WorkArea.Right - Width;
-            }
-            else
-            {
-                NotePanel.Visibility = Visibility.Visible;
-                TogglePanelButton.Content = "▶";
-                Width = 320;
-                Left = SystemParameters.WorkArea.Right - Width;
-            }
+            SetPanelCollapsed(!isPanelCollapsed);
         }
 
         private void NotesList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -84,12 +68,7 @@ namespace SideNotes
 
                 if (item is ListBoxItem && isPanelCollapsed)
                 {
-                    isPanelCollapsed = false;
-                    NotePanel.Visibility = Visibility.Visible;
-                    TogglePanelButton.Content = "▶";
-
-                    Width = 320;
-                    Left = SystemParameters.WorkArea.Right - Width;
+                    SetPanelCollapsed(false);
                 }
             }
         }
@@ -107,7 +86,7 @@ namespace SideNotes
                     this,
                     "Não foi possível salvar as notas. \n\n" +
                     "Deseja fechar mesmo assim? " +
-                    "As alterações não rgavadas serão perdidas.", "Falha ao salvar", 
+                    "As alterações não gravadas serão perdidas.", "Falha ao salvar", 
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning,
                     MessageBoxResult.No);
@@ -115,11 +94,6 @@ namespace SideNotes
                 e.Cancel = answer != MessageBoxResult.Yes;
             }
         }
-
-        private readonly DispatcherTimer autoSaveTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(1)
-        };
 
         private void ViewModel_SaveFailed(string message)
         {
@@ -135,6 +109,26 @@ namespace SideNotes
         {
             viewModel.StopAutoSave();
             viewModel.SaveFailed -= ViewModel_SaveFailed;
+        }
+
+        private void SetPanelCollapsed(bool collapsed)
+        {
+            isPanelCollapsed = collapsed;
+            
+            if (isPanelCollapsed)
+            {
+                NotePanel.Visibility = Visibility.Collapsed;
+                TogglePanelButton.Content = "◀";
+                Width = 100;
+                Left = SystemParameters.WorkArea.Right - Width;
+            }
+            else
+            {
+                NotePanel.Visibility = Visibility.Visible;
+                TogglePanelButton.Content = "▶";
+                Width = 320;
+                Left = SystemParameters.WorkArea.Right - Width;
+            }
         }
     }
 }
