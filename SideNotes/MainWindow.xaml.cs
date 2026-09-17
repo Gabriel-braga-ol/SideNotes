@@ -75,12 +75,7 @@ namespace SideNotes
 
         private void Window_Closing(object? sender, CancelEventArgs e)
         {
-            try
-            {
-                viewModel.SaveNotes();
-            }
-            catch (Exception ex) when (
-                ex is IOException || ex is UnauthorizedAccessException)
+            if (!viewModel.TrySaveNotes(out _)) //out _ descarta a mensagem devolvida pelo método
             {
                 MessageBoxResult answer = MessageBox.Show(
                     this,
