@@ -38,7 +38,7 @@ namespace SideNotes
 
             Notes.Add(note);
             hasUnsavedChanges = true;
-            SelectedNote = note;
+            SetSelectedNote(note, savePreviousNote: false);
 
             SaveNotesAndNotifyFailure();
 
@@ -50,36 +50,7 @@ namespace SideNotes
         public Note? SelectedNote
         {
             get => selectedNote;
-            set
-            {
-                if (selectedNote == value)
-                {
-                    return;
-                }
-                
-                autoSaveTimer.Stop();
-
-                if (selectedNote is not null && Notes.Contains(selectedNote))
-                {
-                    SaveNotesAndNotifyFailure();
-                }
-
-                if (selectedNote is not null)
-                {
-                    selectedNote.PropertyChanged -= OnSelectedNotePropertyChanged;
-                }
-
-                selectedNote = value;
-
-                if (selectedNote is not null)
-                {
-                    selectedNote.PropertyChanged += OnSelectedNotePropertyChanged;
-                }
-
-                PropertyChanged?.Invoke(
-                    this,
-                    new PropertyChangedEventArgs(nameof(SelectedNote)));
-            }
+            set => SetSelectedNote(value);
         }
 
         private void OnSelectedNotePropertyChanged(
@@ -173,12 +144,40 @@ namespace SideNotes
 
         public void SaveCurrentNote()
         {
-            if (SelectedNote is not null)
+            SaveNotesAndNotifyFailure();
+        }
+
+        private void SetSelectedNote(Note? value, bool savePreviousNote = true)
+        {
+            if (selectedNote == value)
+            {
+                return;
+            }
+                
+            autoSaveTimer.Stop();
+
+            if (savePreviousNote && selectedNote is not null && Notes.Contains(selectedNote))
             {
                 SaveNotesAndNotifyFailure();
             }
-        }
 
+            if (selectedNote is not null)
+            {
+                selectedNote.PropertyChanged -= OnSelectedNotePropertyChanged;
+            }
+
+            selectedNote = value;
+
+            if (selectedNote is not null)
+            {
+                selectedNote.PropertyChanged += OnSelectedNotePropertyChanged;
+            }
+
+            PropertyChanged?.Invoke(
+                this,
+                new PropertyChangedEventArgs(nameof(SelectedNote)));
+        }
+        
         private bool hasUnsavedChanges;
 
         public event PropertyChangedEventHandler? PropertyChanged;
