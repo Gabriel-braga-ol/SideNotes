@@ -161,7 +161,14 @@ namespace SideNotes
                     errorMessage ?? "Não foi psosível salvar as notas.");
             }
         }
-        
+
+        public void SaveCurrentNote()
+        {
+            if (SelectedNote is not null)
+            {
+                SaveNotesAndNotifyFailure();
+            }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }

@@ -44,7 +44,7 @@ namespace SideNotes
         
         private void SaveNote_Click(object sender, RoutedEventArgs e)
         {
-            SaveCurrentNote();
+            viewModel.SaveCurrentNote();
         }
 
         private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -115,35 +115,11 @@ namespace SideNotes
                 e.Cancel = answer != MessageBoxResult.Yes;
             }
         }
-        private bool TrySaveNotes()
-        {
-            bool saved = viewModel.TrySaveNotes(out string? errorMessage);
-
-            if (!saved)
-            {
-                MessageBox.Show(
-                    this,
-                    errorMessage ?? "Não foi possível salvar as notas.",
-                    "Falha ao salvar",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-            }
-
-            return saved;
-        }
 
         private readonly DispatcherTimer autoSaveTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(1)
         };
-
-        private void SaveCurrentNote()
-        {
-            if (viewModel.SelectedNote is not null)
-            {
-                TrySaveNotes();
-            }
-        }
 
         private void ViewModel_SaveFailed(string message)
         {
