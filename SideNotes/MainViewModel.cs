@@ -39,11 +39,7 @@ namespace SideNotes
             Notes.Add(note);
             SelectedNote = note;
 
-            if (!TrySaveNotes(out string? errorMessage))
-            {
-                SaveFailed?.Invoke(
-                    errorMessage ?? "Não foi psosível salvar as notas.");
-            }
+            SaveNotesAndNotifyFailure();
 
             return note;
         }
@@ -64,11 +60,7 @@ namespace SideNotes
 
                 if (selectedNote is not null && Notes.Contains(selectedNote))
                 {
-                    if (!TrySaveNotes(out string? errorMessage))
-                    {
-                        SaveFailed?.Invoke(
-                            errorMessage ?? "Não foi possível salvar as notas.");
-                    }
+                    SaveNotesAndNotifyFailure();
                 }
 
                 if (selectedNote is not null)
@@ -141,10 +133,7 @@ namespace SideNotes
                 return;
             }
 
-            if (!TrySaveNotes(out string? errorMessage))
-            {
-                SaveFailed?.Invoke(errorMessage ?? "Não foi possível salvar as notas.");
-            }
+            SaveNotesAndNotifyFailure();
         }
         
         public void StopAutoSave()
@@ -161,12 +150,18 @@ namespace SideNotes
             
             Notes.Remove(SelectedNote);
 
+            SaveNotesAndNotifyFailure();
+        }
+
+        private void SaveNotesAndNotifyFailure()
+        {
             if (!TrySaveNotes(out string? errorMessage))
             {
                 SaveFailed?.Invoke(
                     errorMessage ?? "Não foi psosível salvar as notas.");
             }
         }
+        
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }
