@@ -37,6 +37,7 @@ namespace SideNotes
             };
 
             Notes.Add(note);
+            hasUnsavedChanges = true;
             SelectedNote = note;
 
             SaveNotesAndNotifyFailure();
@@ -88,6 +89,7 @@ namespace SideNotes
                 e.PropertyName == nameof(Note.Content))
             {
                 autoSaveTimer.Stop();
+                hasUnsavedChanges = true;
                 autoSaveTimer.Start();
             }
         }
@@ -96,6 +98,7 @@ namespace SideNotes
         {
             autoSaveTimer.Stop();
             NoteStorage.Save(Notes.ToList());
+            hasUnsavedChanges = false;
         }
 
         public bool TrySaveNotes(out string? errorMessage)
@@ -147,7 +150,8 @@ namespace SideNotes
             {
                 return;
             }
-            
+
+            hasUnsavedChanges = true;
             Notes.Remove(SelectedNote);
 
             SaveNotesAndNotifyFailure();
@@ -155,10 +159,15 @@ namespace SideNotes
 
         private void SaveNotesAndNotifyFailure()
         {
+            if (!hasUnsavedChanges)
+            {
+                return;
+            }
+            
             if (!TrySaveNotes(out string? errorMessage))
             {
                 SaveFailed?.Invoke(
-                    errorMessage ?? "Não foi psosível salvar as notas.");
+                    errorMessage ?? "Não foi possível salvar as notas.");
             }
         }
 
@@ -169,6 +178,8 @@ namespace SideNotes
                 SaveNotesAndNotifyFailure();
             }
         }
+
+        private bool hasUnsavedChanges;
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }
