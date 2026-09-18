@@ -19,10 +19,12 @@ namespace SideNotes
     
     public partial class MainWindow : Window
     {
-        private readonly MainViewModel viewModel = new MainViewModel();
-        public MainWindow()
+        private readonly MainViewModel viewModel;
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
+
+            this.viewModel = viewModel;
 
             viewModel.SaveFailed += ViewModel_SaveFailed;
             Closed += MainWindow_Closed;
