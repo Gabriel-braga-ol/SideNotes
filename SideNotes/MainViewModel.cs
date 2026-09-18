@@ -9,6 +9,8 @@ namespace SideNotes
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        public string? LoadWarningMessage { get; }
+        
         private readonly string[] noteColors =
         {
             "#B8E6D0",
@@ -21,7 +23,9 @@ namespace SideNotes
 
         public MainViewModel()
         {
-            Notes = new ObservableCollection<Note>(NoteStorage.Load());
+            Notes = new ObservableCollection<Note>(NoteStorage.Load(out string? warningMessage));
+            LoadWarningMessage = warningMessage;
+            
             autoSaveTimer.Tick += AutoSaveTimer_Tick;
             
             SelectedNote = Notes.FirstOrDefault();

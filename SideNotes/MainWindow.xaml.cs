@@ -29,6 +29,8 @@ namespace SideNotes
             
             DataContext = viewModel;
 
+            Loaded += MainWindow_Loaded;
+
             Left = SystemParameters.WorkArea.Right - Width;
             Top = SystemParameters.WorkArea.Top;
         }
@@ -123,6 +125,17 @@ namespace SideNotes
                 TogglePanelButton.Content = "▶";
                 Width = 320;
                 Left = SystemParameters.WorkArea.Right - Width;
+            }
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (viewModel.LoadWarningMessage is not null)
+            {
+                MessageBox.Show(
+                    this,
+                    viewModel.LoadWarningMessage,
+                    "SideNotes");
             }
         }
     }

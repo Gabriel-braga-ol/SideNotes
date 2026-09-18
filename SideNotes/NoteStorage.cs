@@ -37,8 +37,10 @@ namespace SideNotes
             }
         }
 
-        public static List<Note> Load()
+        public static List<Note> Load(out string? warningMessage)
         {
+            warningMessage = null;
+            
             if (!File.Exists(FilePath))
             {
                 return new List<Note>();
@@ -57,9 +59,8 @@ namespace SideNotes
                 
                 File.Copy(FilePath, backupPath);
 
-                System.Windows.MessageBox.Show(
-                    "Não foi possível carregar as notas porque o JSON é inválido.\n\n" +
-                    "Uma cópia do arquivo foi preservada em: \n" + backupPath, "SideNotes");
+                warningMessage = "Não foi possível carregar as notas porque o JSON é inválido.\n\n" +
+                                 "Uma cópia do arquivo foi preservada em: \n" + backupPath;
                 
                 return new List<Note>();
             }
