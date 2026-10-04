@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Windows.Media;
+using System.Text.RegularExpressions;
 
 namespace SideNotes
 {
@@ -72,6 +73,11 @@ namespace SideNotes
                     {
                         throw new JsonException("O arquivo contém uma nota com título ou conteúdo nulo.");
                     }
+
+                    if (note.Color is null || !Regex.IsMatch(note.Color, @"\A#[0-9a-fA-F]{6}\z"))
+                    {
+                        throw new JsonException("Uma nota contém uma cor inválida.");
+                    }
                 }
 
                 return notes;
@@ -83,7 +89,7 @@ namespace SideNotes
                 
                 File.Copy(FilePath, backupPath);
 
-                warningMessage = "Não foi possível carregar as notas porque o JSON é inválido.\n\n" +
+                warningMessage = "Não foi possível carregar as notas porque o arquivo contém dados inválidos.\n\n" +
                                  "Uma cópia do arquivo foi preservada em: \n" + backupPath;
                 
                 return new List<Note>();

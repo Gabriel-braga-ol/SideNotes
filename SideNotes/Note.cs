@@ -8,6 +8,9 @@ namespace SideNotes
     public class Note : INotifyPropertyChanged
     {
         private string title = string.Empty;
+        private string content = string.Empty;
+        public string Color { get; set; } = "#B8E6D0";
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public string Title
         {
@@ -26,8 +29,6 @@ namespace SideNotes
                     new PropertyChangedEventArgs(nameof(Title)));
             }
         }
-        
-        private string content = string.Empty;
 
         public string Content
         {
@@ -46,9 +47,5 @@ namespace SideNotes
                     new PropertyChangedEventArgs(nameof(Content)));
             }
         }
-        
-        public string Color { get; set; } = "#B8E6D0";
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }
