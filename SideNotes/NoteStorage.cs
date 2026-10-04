@@ -58,8 +58,24 @@ namespace SideNotes
 
             try
             {
-                return JsonSerializer.Deserialize<List<Note>>(json)
-                       ?? throw new JsonException("O arquivo não contém uma lista de notas.");
+                List<Note> notes = JsonSerializer.Deserialize<List<Note>>(json)
+                    ?? throw new JsonException("O arquivo não contém uma lista de notas.");
+
+                foreach (Note note in notes)
+                {
+                    if (note is null)
+                    {
+                        throw new JsonException("O arquivo contém uma nota nula.");
+                    }
+
+                    if (note.Title is null || note.Content is null)
+                    {
+                        throw new JsonException("O arquivo contém uma nota com título ou conteúdo nulo.");
+                    }
+                }
+
+                return notes;
+
             }
             catch (JsonException)
             {
