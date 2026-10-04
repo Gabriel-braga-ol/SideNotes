@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.IO;
 using System.Windows.Threading;
+using System.Windows.Data;
 
 namespace SideNotes
 {
@@ -11,8 +12,10 @@ namespace SideNotes
     {
         public string? LoadWarningMessage { get; }
         public ObservableCollection<Note> Notes { get; }
+        public ICollectionView FilteredNotes { get; }
         private Note? selectedNote;
         public event Action<string>? SaveFailed;
+        private string searchText = string.Empty;
         private bool hasUnsavedChanges;
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -30,6 +33,10 @@ namespace SideNotes
         public MainViewModel()
         {
             Notes = new ObservableCollection<Note>(NoteStorage.Load(out string? warningMessage));
+
+            FilteredNotes = new ListCollectionView(Notes);
+            FilteredNotes.Filter = MatchesSearch;
+
             LoadWarningMessage = warningMessage;
             
             autoSaveTimer.Tick += AutoSaveTimer_Tick;
@@ -39,6 +46,8 @@ namespace SideNotes
         
         public Note CreateNote()
         {
+            SearchText = string.Empty;
+
             Note note = new Note
             {
                 Title = $"Nova nota {Notes.Count + 1}",
@@ -194,7 +203,44 @@ namespace SideNotes
             PropertyChanged?.Invoke(
                 this,
                 new PropertyChangedEventArgs(nameof(SelectedNote)));
-        }       
+        }
+        
+        public string SearchText
+        {
+            get => searchText;
+            set
+            {
+                if (searchText == value)
+                {
+                    return;
+                }
+
+                searchText = value;
+                FilteredNotes.Refresh();
+
+                PropertyChanged?.Invoke(
+                    this,
+                    new PropertyChangedEventArgs(nameof(SearchText)));
+            }
+        }
+
+        private bool MatchesSearch(object item)
+        {
+            if (item is not Note note)
+            {
+                return false;
+            }
+
+            string query = searchText.Trim();
+
+            if (query.Length == 0)
+            {
+                return true;
+            }
+
+            return note.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                   note.Content.Contains(query, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }
 

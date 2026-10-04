@@ -30,6 +30,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -40,12 +41,22 @@
                         FontSize="14"
                         Click="AddNote_Click"/>
 
+                <TextBox Grid.Row="1"
+                         Margin="0,0,0,12"
+                         FontSize="14"
+                         VerticalContentAlignment="Center"
+                         ToolTip="Buscar por título ou conteúdo"
+                         AutomationProperties.Name="Buscar notas"
+                         Text="{Binding SearchText, 
+                                        Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged}"/>
+
                 <ListBox x:Name="NotesList"
-                         Grid.Row="1"
+                         Grid.Row="2"
                          Background="Transparent"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ItemsSource="{Binding Notes}"
+                         ItemsSource="{Binding FilteredNotes}"
                          SelectedItem="{Binding SelectedNote, Mode=TwoWay}">
 
                     <ListBox.ItemTemplate>
@@ -169,5 +180,26 @@
                          VerticalScrollBarVisibility="Auto"/>
             </Grid>
         </Border>
+
+        <TextBlock Grid.Column="1"
+           Text="Selecione ou crie uma nota"
+           HorizontalAlignment="Center"
+           VerticalAlignment="Center"
+           FontSize="18"
+           Foreground="#687078"
+           IsHitTestVisible="False">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedNote}"
+                             Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
     </Grid>
 </Window>
