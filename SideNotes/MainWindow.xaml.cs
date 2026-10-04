@@ -20,7 +20,6 @@ namespace SideNotes
     public partial class MainWindow : Window
     {
         private readonly MainViewModel viewModel;
-        private bool isPanelCollapsed = false;
 
 
         public MainWindow(MainViewModel viewModel)
@@ -35,9 +34,6 @@ namespace SideNotes
             DataContext = viewModel;
 
             Loaded += MainWindow_Loaded;
-
-            Left = SystemParameters.WorkArea.Right - Width;
-            Top = SystemParameters.WorkArea.Top;
         }
         private void AddNote_Click(object sender, RoutedEventArgs e)
         {
@@ -46,12 +42,7 @@ namespace SideNotes
             NotesList.ScrollIntoView(note);
 
             TitleTextBox.Focus();
-        }
-        
-        private void SaveNote_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.SaveCurrentNote();
-        }
+        }     
 
         private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -59,27 +50,8 @@ namespace SideNotes
             {
                 viewModel.DeleteSelectedNote();
             }
-        }
+        }              
         
-
-        private void TogglePanel_Click(object sender, RoutedEventArgs e)
-        {
-            SetPanelCollapsed(!isPanelCollapsed);
-        }
-
-        private void NotesList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (e.OriginalSource is DependencyObject clickedElement)
-            {
-                var item = ItemsControl.ContainerFromElement(NotesList, clickedElement);
-
-                if (item is ListBoxItem && isPanelCollapsed)
-                {
-                    SetPanelCollapsed(false);
-                }
-            }
-        }
-
         private void Window_Closing(object? sender, CancelEventArgs e)
         {
             if (!viewModel.TrySaveNotes(out _)) //out _ descarta a mensagem devolvida pelo método
@@ -112,27 +84,7 @@ namespace SideNotes
             viewModel.StopAutoSave();
             viewModel.SaveFailed -= ViewModel_SaveFailed;
         }
-
-        private void SetPanelCollapsed(bool collapsed)
-        {
-            isPanelCollapsed = collapsed;
-            
-            if (isPanelCollapsed)
-            {
-                NotePanel.Visibility = Visibility.Collapsed;
-                TogglePanelButton.Content = "◀";
-                Width = 100;
-                Left = SystemParameters.WorkArea.Right - Width;
-            }
-            else
-            {
-                NotePanel.Visibility = Visibility.Visible;
-                TogglePanelButton.Content = "▶";
-                Width = 320;
-                Left = SystemParameters.WorkArea.Right - Width;
-            }
-        }
-
+        
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             if (viewModel.LoadWarningMessage is not null)
