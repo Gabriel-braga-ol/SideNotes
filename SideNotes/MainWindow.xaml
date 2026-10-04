@@ -53,6 +53,7 @@
 
                 <ListBox x:Name="NotesList"
                          Grid.Row="2"
+                         FocusVisualStyle="{x:Null}"
                          Background="Transparent"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"

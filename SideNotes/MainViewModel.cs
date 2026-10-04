@@ -139,6 +139,8 @@ namespace SideNotes
             }
 
             Note noteToDelete = SelectedNote;
+
+            var visibleNotes = FilteredNotes.Cast<Note>().ToList();
             int index = Notes.IndexOf(noteToDelete);
 
             SetSelectedNote(null, savePreviousNote: false);
@@ -146,10 +148,12 @@ namespace SideNotes
             hasUnsavedChanges = true;
             Notes.Remove(noteToDelete);
 
-            if (Notes.Count > 0)
+            visibleNotes = FilteredNotes.Cast<Note>().ToList();
+
+            if (visibleNotes.Count > 0)
             {
-                int newIndex = Math.Min(index, Notes.Count - 1);
-                SetSelectedNote(Notes[newIndex], savePreviousNote: false);
+                int newIndex = Math.Clamp(index, 0, visibleNotes.Count - 1);
+                SetSelectedNote(visibleNotes[newIndex], savePreviousNote: false);
             }
 
             SaveNotesAndNotifyFailure();
