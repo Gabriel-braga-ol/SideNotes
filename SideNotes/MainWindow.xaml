@@ -16,29 +16,134 @@
         Background="#F5F6F8"
         PreviewKeyDown="Window_PreviewKeyDown"
         Closing="Window_Closing">
-    <Grid Background="Transparent">
+
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="260"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <Border x:Name="NotePanel"
-                Grid.Column="1"
-                Background="{Binding SelectedNote.Color,
-                     TargetNullValue=Transparent,
-                     FallbackValue=Transparent}"
-                CornerRadius="18"
-                Margin="0,12,12,12"
-                Padding="24">
+
+        <!-- Lista de notas -->
+        <Border Grid.Column="0"
+                Background="Transparent"
+                Margin="12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                
+
+                <Button Grid.Row="0"
+                        Content="+ Nova nota"
+                        Height="40"
+                        Margin="0,0,0,12"
+                        FontSize="14"
+                        Click="AddNote_Click"/>
+
+                <ListBox x:Name="NotesList"
+                         Grid.Row="1"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ItemsSource="{Binding Notes}"
+                         SelectedItem="{Binding SelectedNote, Mode=TwoWay}">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock Text="{Binding Content}"
+                                           FontSize="12"
+                                           Opacity="0.75"
+                                           Margin="0,6,0,0"
+                                           TextWrapping="NoWrap"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Height" Value="72"/>
+                            <Setter Property="Margin" Value="0,4"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Background" Value="{Binding Color}"/>
+                            <Setter Property="Foreground" Value="#1E3A34"/>
+                            <Setter Property="HorizontalContentAlignment"
+                                    Value="Stretch"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="NoteItemBorder"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="2"
+                                                CornerRadius="12"
+                                                Padding="12">
+                                            <ContentPresenter
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected"
+                                                     Value="True">
+                                                <Setter TargetName="NoteItemBorder"
+                                                        Property="BorderBrush"
+                                                        Value="#31544B"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- Editor da nota selecionada -->
+        <Border x:Name="NotePanel"
+                Grid.Column="1"
+                Background="{Binding SelectedNote.Color,
+                                     TargetNullValue=Transparent,
+                                     FallbackValue=Transparent}"
+                CornerRadius="18"
+                Margin="0,12,12,12"
+                Padding="24">
+
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="IsEnabled" Value="True"/>
+
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedNote}"
+                         Value="{x:Null}">
+                            <Setter Property="IsEnabled" Value="False"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
                 <TextBox x:Name="TitleTextBox"
                          Grid.Row="0"
-                         Text="{Binding SelectedNote.Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue='', FallbackValue=''}"
+                         Text="{Binding SelectedNote.Title,
+                                        Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged,
+                                        TargetNullValue='',
+                                        FallbackValue=''}"
                          FontSize="24"
                          TextWrapping="NoWrap"
                          FontWeight="SemiBold"
@@ -49,7 +154,11 @@
 
                 <TextBox x:Name="ContentTextBox"
                          Grid.Row="1"
-                         Text="{Binding SelectedNote.Content, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue='', FallbackValue=''}"
+                         Text="{Binding SelectedNote.Content,
+                                        Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged,
+                                        TargetNullValue='',
+                                        FallbackValue=''}"
                          FontSize="16"
                          Foreground="#31544B"
                          Background="Transparent"
@@ -58,99 +167,7 @@
                          TextWrapping="Wrap"
                          VerticalContentAlignment="Top"
                          VerticalScrollBarVisibility="Auto"/>
-
-                <Button Content="+"
-                        Grid.Row="2"
-                        Width="40"
-                        Height="40"
-                        FontSize="24"
-                        Foreground="#1E3A34"
-                        Background="#EAF6F0"
-                        BorderThickness="0"
-                        Padding="0"
-                        HorizontalAlignment="Right"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Margin="0,1,0,0"
-                        Click="AddNote_Click">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}"
-                                    CornerRadius="21">
-                                <ContentPresenter HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"/>
-                            </Border>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
             </Grid>
-        </Border>
-        <Border Grid.Column="0"
-                Background="Transparent"
-                Margin="12">
-
-            <ListBox x:Name="NotesList"                                              
-                         Background="Transparent"
-                         BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"                        
-                         ItemsSource="{Binding Notes}"
-                         SelectedItem="{Binding SelectedNote, Mode=TwoWay}">
-
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"/>
-
-                                    <TextBlock Text="{Binding Content}"
-                               FontSize="12"
-                               Opacity="0.75"
-                               Margin="0,6,0,0"
-                               TextWrapping="NoWrap"
-                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Height" Value="72"/>
-                        <Setter Property="Margin" Value="0,4"/>
-                        <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Background" Value="{Binding Color}"/>
-                        <Setter Property="Foreground" Value="#1E3A34"/>
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="VerticalAlignment" Value="Center"/>
-
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="NoteItemBorder"
-                                            Background="{TemplateBinding Background}"
-                                            BorderBrush="Transparent"
-                                            BorderThickness="2"
-                                            CornerRadius="12"
-                                            Padding="12">
-                                        <ContentPresenter
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Center"/>
-                                    </Border>
-
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="NoteItemBorder"
-                                                    Property="BorderBrush"
-                                                    Value="#31544B"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-            </ListBox>
         </Border>
     </Grid>
 </Window>
