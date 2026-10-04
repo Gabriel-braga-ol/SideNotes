@@ -12,6 +12,7 @@ namespace SideNotes
         public string Color { get; set; } = "#B8E6D0";
         public event PropertyChangedEventHandler? PropertyChanged;
 
+
         public string Title
         {
             get => title;

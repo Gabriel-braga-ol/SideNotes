@@ -10,7 +10,13 @@ namespace SideNotes
     public class MainViewModel : INotifyPropertyChanged
     {
         public string? LoadWarningMessage { get; }
-        
+        public ObservableCollection<Note> Notes { get; }
+        private Note? selectedNote;
+        public event Action<string>? SaveFailed;
+        private bool hasUnsavedChanges;
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+
         private readonly string[] noteColors =
         {
             "#B8E6D0",
@@ -19,7 +25,7 @@ namespace SideNotes
             "#F3B3B3",
             "#A8D8EA"
         };
-        public ObservableCollection<Note> Notes { get; }
+        
 
         public MainViewModel()
         {
@@ -49,8 +55,6 @@ namespace SideNotes
             return note;
         }
         
-        private Note? selectedNote;
-
         public Note? SelectedNote
         {
             get => selectedNote;
@@ -100,7 +104,6 @@ namespace SideNotes
             Interval = TimeSpan.FromSeconds(1)
         };
 
-        public event Action<string>? SaveFailed;
 
         private void AutoSaveTimer_Tick(object? sender, EventArgs e)
         {
@@ -126,8 +129,19 @@ namespace SideNotes
                 return;
             }
 
+            Note noteToDelete = SelectedNote;
+            int index = Notes.IndexOf(noteToDelete);
+
+            SetSelectedNote(null, savePreviousNote: false);
+
             hasUnsavedChanges = true;
-            Notes.Remove(SelectedNote);
+            Notes.Remove(noteToDelete);
+
+            if (Notes.Count > 0)
+            {
+                int newIndex = Math.Min(index, Notes.Count - 1);
+                SetSelectedNote(Notes[newIndex], savePreviousNote: false);
+            }
 
             SaveNotesAndNotifyFailure();
         }
@@ -180,11 +194,7 @@ namespace SideNotes
             PropertyChanged?.Invoke(
                 this,
                 new PropertyChangedEventArgs(nameof(SelectedNote)));
-        }
-        
-        private bool hasUnsavedChanges;
-
-        public event PropertyChangedEventHandler? PropertyChanged;
+        }       
     }
 }
 

@@ -20,6 +20,9 @@ namespace SideNotes
     public partial class MainWindow : Window
     {
         private readonly MainViewModel viewModel;
+        private bool isPanelCollapsed = false;
+
+
         public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
@@ -57,7 +60,7 @@ namespace SideNotes
                 viewModel.DeleteSelectedNote();
             }
         }
-        private bool isPanelCollapsed = false;
+        
 
         private void TogglePanel_Click(object sender, RoutedEventArgs e)
         {
