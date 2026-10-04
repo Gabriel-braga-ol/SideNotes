@@ -6,7 +6,7 @@ using System.Windows.Media;
 
 namespace SideNotes
 {
-    public static class NoteStorage
+    public static class NoteStorage 
     {
         private static readonly string FolderPath = 
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideNotes");
@@ -40,13 +40,21 @@ namespace SideNotes
         public static List<Note> Load(out string? warningMessage)
         {
             warningMessage = null;
-            
-            if (!File.Exists(FilePath))
+
+            string json;
+
+            try
+            {
+                json = File.ReadAllText(FilePath);
+            }
+            catch (FileNotFoundException)
             {
                 return new List<Note>();
             }
-
-            string json = File.ReadAllText(FilePath);
+            catch (DirectoryNotFoundException)
+            {
+                return new List<Note>();
+            };
 
             try
             {
