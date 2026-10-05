@@ -41,15 +41,22 @@
                         FontSize="14"
                         Click="AddNote_Click"/>
 
-                <TextBox Grid.Row="1"
-                         Margin="0,0,0,12"
-                         FontSize="14"
-                         VerticalContentAlignment="Center"
-                         ToolTip="Buscar por título ou conteúdo"
-                         AutomationProperties.Name="Buscar notas"
-                         Text="{Binding SearchText, 
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged}"/>
+                <StackPanel Grid.Row="1"
+                            Margin="0,0,0,12">
+                    <TextBlock Text="Buscar notas"
+                               FontSize="12"
+                               Foreground="#687078"
+                               Margin="0,0,0,6"/>
+
+                    <TextBox Text="{Binding SearchText,
+                                            Mode=TwoWay,
+                                            UpdateSourceTrigger=PropertyChanged}"
+                            Padding="10,8"
+                            FontSize="14"
+                            VerticalContentAlignment="Center"
+                            ToolTip="Buscar por título ou conteúdo"
+                            AutomationProperties.Name="Buscar notas"/>
+                </StackPanel>
 
                 <ListBox x:Name="NotesList"
                          Grid.Row="2"
@@ -117,6 +124,29 @@
                         </Style>
                     </ListBox.ItemContainerStyle>
                 </ListBox>
+
+                <TextBlock Grid.Row="2"
+                           Text="Nenhuma nota encontrada"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,24,0,0"
+                           Foreground="#687078"
+                           IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ElementName=NotesList,
+                                               Path=HasItems}"
+                             Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
             </Grid>
         </Border>
 
