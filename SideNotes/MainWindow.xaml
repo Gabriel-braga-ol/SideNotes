@@ -115,6 +115,7 @@
                          Background="Transparent"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Hidden"
                          ItemsSource="{Binding FilteredNotes}"
                          SelectedItem="{Binding SelectedNote, Mode=TwoWay}">
 
@@ -259,7 +260,7 @@
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          VerticalContentAlignment="Top"
-                         VerticalScrollBarVisibility="Auto"/>
+                         VerticalScrollBarVisibility="Hidden"/>
             </Grid>
         </Border>
 
