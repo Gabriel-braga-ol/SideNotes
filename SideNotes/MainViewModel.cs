@@ -102,7 +102,7 @@ namespace SideNotes
                 errorMessage =
                     "Não foi possível salvar as notas no arquivo.\n\n" +
                     "Suas alterações continuam na memória. " +
-                    "Mantenha o aplicativo aberto e tente salvar novamente.";
+                    "Mantenha o aplicativo aberto e pressione Ctrl +S para tentar salvar novamente.";
 
                 return false;
             }
