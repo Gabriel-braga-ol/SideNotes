@@ -46,6 +46,14 @@ namespace SideNotes
 
         private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel.SaveCurrentNote();
+                e.Handled = true;
+                return;
+            }
+
+
             if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && viewModel.SelectedNote is not null)
             {
                 viewModel.DeleteSelectedNote();
