@@ -20,6 +20,10 @@ namespace SideNotes
         public DeskWindow()
         {
             InitializeComponent();
+
+            Title = DesktopIntegration.IsDesktopAvailable()
+                ? "Desk — Explorer encontrado"
+                : "Desk — Explorer não encontrado";
         }
     }
 }
