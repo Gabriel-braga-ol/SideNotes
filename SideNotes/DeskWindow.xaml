@@ -4,15 +4,29 @@
         Title="Desk — protótipo"
         Width="280"
         Height="360"
+        WindowStyle="None"
         ResizeMode="NoResize"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
+        ShowInTaskbar="False"
+        ShowActivated="False"
         Background="#B8E6D0">
     <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        
         <TextBlock Text="Protótipo do modo Desk"
                    FontSize="22"
                    Foreground="#1E3A34"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"/>
+
+        <Button Grid.Row="1"
+                Content="Testar clique"
+                Height="36"
+                Click="TestClick_Click"/>
     </Grid>
 </Window>

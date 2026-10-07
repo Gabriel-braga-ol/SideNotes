@@ -3,6 +3,8 @@ using System.Data;
 using System.Windows;
 using System;
 using System.IO;
+using System.ComponentModel;
+using System.Windows.Interop;
 
 namespace SideNotes
 {
@@ -38,11 +40,35 @@ namespace SideNotes
             MainWindow window = new MainWindow(viewModel);
             window.Show();
 
-            DeskWindow deskWindow = new DeskWindow();
-            deskWindow.Show();
+            window.Closed += (_, _) =>
+            {
+                deskSource?.Dispose();
+                deskSource = null;
+            };
 
-            window.Closed += (_, _) => deskWindow.Close();
+            try
+            {
+                IntPtr mainWindowHandle =
+                    new WindowInteropHelper(window).Handle;
+
+                deskSource =
+                    DesktopIntegration.CreateDeskPrototype(mainWindowHandle);
+            }
+            catch (Exception ex) when (
+                ex is Win32Exception ||
+                ex is InvalidOperationException)
+            {
+                MessageBox.Show(
+                    window,
+                    "Não foi possível criar o protótipo Desk.\n\n" +
+                    ex.Message,
+                    "SideNotes",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
+
+        private HwndSource? deskSource;
     }
 
 }
