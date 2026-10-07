@@ -1,0 +1,18 @@
+﻿<Window x:Class="SideNotes.DeskWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Desk — protótipo"
+        Width="280"
+        Height="360"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="#B8E6D0">
+    <Grid Margin="24">
+        <TextBlock Text="Protótipo do modo Desk"
+                   FontSize="22"
+                   Foreground="#1E3A34"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+    </Grid>
+</Window>
