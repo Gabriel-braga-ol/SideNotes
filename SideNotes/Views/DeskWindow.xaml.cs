@@ -1,20 +1,14 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
+using SideNotes.ViewModels;
 
 namespace SideNotes.Views
 {
     public partial class DeskWindow : Window
     {
-        public DeskWindow()
+        public DeskWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-        }
-
-        private void TestClick_Click(
-            object sender,
-            RoutedEventArgs e)
-        {
-            ((Button)sender).Content = "Clique recebido!";
+            DataContext = viewModel;
         }
     }
 }

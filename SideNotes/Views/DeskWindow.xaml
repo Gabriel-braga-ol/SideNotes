@@ -1,32 +1,68 @@
 ﻿<Window x:Class="SideNotes.Views.DeskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Desk — protótipo"
-        Width="280"
-        Height="360"
+        Title="SideNotes — Desk"
+        Width="320"
+        Height="520"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True"
-        ShowActivated="True"
-        Background="#B8E6D0">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        
-        <TextBlock Text="Protótipo do modo Desk"
-                   FontSize="22"
-                   Foreground="#1E3A34"
-                   TextWrapping="Wrap"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
+        Background="#F5F6F8">
 
-        <Button Grid.Row="1"
-                Content="Testar clique"
-                Height="36"
-                Click="TestClick_Click"/>
+    <Grid Margin="12">
+        <ScrollViewer VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollBarVisibility="Disabled">
+
+            <ItemsControl x:Name="DeskNotesList"
+                          ItemsSource="{Binding DeskNotes}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding Color}"
+                                CornerRadius="14"
+                                Padding="18"
+                                Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1E3A34"
+                                           TextWrapping="Wrap"/>
+
+                                <TextBlock Text="{Binding Content}"
+                                           FontSize="14"
+                                           Foreground="#31544B"
+                                           TextWrapping="Wrap"
+                                           Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <TextBlock Text="Fixe uma nota na janela principal para vê-la aqui."
+                   FontSize="16"
+                   Foreground="#687078"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Margin="20"
+                   IsHitTestVisible="False">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ElementName=DeskNotesList,
+                                                       Path=HasItems}"
+                                     Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
     </Grid>
 </Window>

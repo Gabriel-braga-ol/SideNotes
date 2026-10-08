@@ -40,7 +40,7 @@ namespace SideNotes
             MainWindow window = new MainWindow(viewModel);
             window.Show();
 
-            DeskWindow deskWindow = new DeskWindow();
+            DeskWindow deskWindow = new DeskWindow(viewModel);
             deskWindow.Show();
 
             window.Closed += (_, _) => deskWindow.Close();                    

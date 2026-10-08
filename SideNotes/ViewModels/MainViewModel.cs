@@ -15,6 +15,7 @@ namespace SideNotes.ViewModels
         public string? LoadWarningMessage { get; }
         public ObservableCollection<Note> Notes { get; }
         public ICollectionView FilteredNotes { get; }
+        public ICollectionView DeskNotes { get; }
         private Note? selectedNote;
         public event Action<string>? SaveFailed;
         private string searchText = string.Empty;
@@ -37,6 +38,9 @@ namespace SideNotes.ViewModels
         public MainViewModel()
         {
             Notes = new ObservableCollection<Note>(NoteStorage.Load(out string? warningMessage));
+
+            DeskNotes = new ListCollectionView(Notes);
+            DeskNotes.Filter = item => item is Note note && note.IsPinnedToDesk;
 
             FilteredNotes = new ListCollectionView(Notes);
             FilteredNotes.Filter = MatchesSearch;
@@ -267,6 +271,8 @@ namespace SideNotes.ViewModels
             }
 
             SelectedNote.IsPinnedToDesk = !SelectedNote.IsPinnedToDesk;
+
+            DeskNotes.Refresh();
 
             hasUnsavedChanges = true;
             SaveNotesAndNotifyFailure();
