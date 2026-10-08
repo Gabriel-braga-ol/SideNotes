@@ -4,11 +4,11 @@
         Title="Desk — protótipo"
         Width="280"
         Height="360"
-        WindowStyle="None"
+        WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
-        WindowStartupLocation="Manual"
-        ShowInTaskbar="False"
-        ShowActivated="False"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        ShowActivated="True"
         Background="#B8E6D0">
     <Grid Margin="24">
         <Grid.RowDefinitions>
