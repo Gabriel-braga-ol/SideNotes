@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.ComponentModel;
 
-namespace SideNotes
+namespace SideNotes.Models
 {
     public class Note : INotifyPropertyChanged
     {

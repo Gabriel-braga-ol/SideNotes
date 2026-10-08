@@ -5,8 +5,10 @@ using System.Linq;
 using System.IO;
 using System.Windows.Threading;
 using System.Windows.Data;
+using SideNotes.Models;
+using SideNotes.Services;
 
-namespace SideNotes
+namespace SideNotes.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {

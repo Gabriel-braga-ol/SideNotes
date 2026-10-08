@@ -13,8 +13,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Collections.ObjectModel;
 using System.Linq;
+using SideNotes.Models;
+using SideNotes.ViewModels;
 
-namespace SideNotes
+namespace SideNotes.Views
 {
     
     public partial class MainWindow : Window

@@ -3,6 +3,8 @@ using System.Data;
 using System.Windows;
 using System;
 using System.IO;
+using SideNotes.ViewModels;
+using SideNotes.Views;
 
 namespace SideNotes
 {

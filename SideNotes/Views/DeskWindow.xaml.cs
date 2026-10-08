@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 
-namespace SideNotes
+namespace SideNotes.Views
 {
     public partial class DeskWindow : Window
     {
