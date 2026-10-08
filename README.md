@@ -4,7 +4,7 @@ Aplicativo de notas para Windows desenvolvido em **C# com WPF**, para organizar 
 
 O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces desktop, binding de dados, separação de responsabilidades e persistência local.
 
-> **Em desenvolvimento:** o modo Janela já permite gerenciar as notas. O modo Desk e novas melhorias visuais estão planejados e ainda não foram implementados.
+> **Em desenvolvimento:** o modo Janela já permite gerenciar as notas. O modo Desk possui uma janela de protótipo, ainda sem integração com as notas. Novas melhorias visuais estão planejadas.
 
 ## Interface atual
 
@@ -75,27 +75,31 @@ Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substi
 
 ## Organização do código
 
-O projeto separa o modelo de dados, a interface, o estado da aplicação e o armazenamento, seguindo uma organização baseada em MVVM.
+O projeto separa o modelo de dados, a interface, o estado da aplicação e o armazenamento, seguindo uma organização baseada em MVVM. Dentro de `SideNotes/`, os arquivos estão agrupados nas pastas `Models`, `ViewModels`, `Views` e `Services`, com namespaces correspondentes (`SideNotes.Models`, `SideNotes.ViewModels`, `SideNotes.Views` e `SideNotes.Services`).
 
 | Arquivo | Responsabilidade |
 | --- | --- |
 | `App.xaml` e `App.xaml.cs` | Inicialização e tratamento de falhas ao carregar os dados. |
-| `Note.cs` | Dados da nota e notificações de alteração. |
-| `MainViewModel.cs` | Coleção de notas, seleção, busca, criação, exclusão e salvamento automático. |
-| `MainWindow.xaml` | Layout, estilos e bindings da interface. |
-| `MainWindow.xaml.cs` | Interações visuais, foco, atalhos e apresentação de avisos. |
-| `NoteStorage.cs` | Leitura, validação e gravação do arquivo JSON. |
+| `Models/Note.cs` | Dados da nota e notificações de alteração. |
+| `ViewModels/MainViewModel.cs` | Coleção de notas, seleção, busca, criação, exclusão e salvamento automático. |
+| `Views/MainWindow.xaml` | Layout, estilos e bindings da interface. |
+| `Views/MainWindow.xaml.cs` | Interações visuais, foco, atalhos e apresentação de avisos. |
+| `Views/DeskWindow.xaml` e `Views/DeskWindow.xaml.cs` | Interface e interação do protótipo do modo Desk. |
+| `Services/NoteStorage.cs` | Leitura, validação e gravação do arquivo JSON. |
+
+`App.xaml`, `App.xaml.cs` e `AssemblyInfo.cs` permanecem na raiz do projeto.
 
 ## Próximas etapas
 
 - [ ] Refinar o comportamento da busca durante a edição de notas.
 - [ ] Melhorar o design do modo Janela.
-- [ ] Criar o modo **Desk**, compartilhando as mesmas notas do modo Janela.
+- [ ] Evoluir o protótipo do modo **Desk** para compartilhar as mesmas notas do modo Janela.
 - [ ] Permitir selecionar até cinco notas para exibição no Desk.
 - [ ] Permitir arrastar o conjunto de notas entre os lados esquerdo e direito da tela.
 - [ ] Respeitar a área disponível da tela e a posição da barra de tarefas.
-- [ ] Implementar e validar a exibição do Desk apenas na área de trabalho, sem sobrepor outros aplicativos.
 - [ ] Salvar as preferências do Desk, incluindo posição e notas escolhidas.
+
+Por enquanto, o Desk será uma janela comum: poderá ficar à frente ou atrás de outros aplicativos, sem permanecer sempre no topo. A exigência de exibi-lo apenas na área de trabalho, sem sobrepor outros aplicativos, foi adiada. A integração experimental com o Explorer foi removida.
 
 ## Autor
 
