@@ -99,8 +99,6 @@ O projeto separa o modelo de dados, a interface, o estado da aplicação e o arm
 - [ ] Respeitar a área disponível da tela e a posição da barra de tarefas.
 - [ ] Salvar as preferências do Desk, incluindo posição e notas escolhidas.
 
-Por enquanto, o Desk será uma janela comum: poderá ficar à frente ou atrás de outros aplicativos, sem permanecer sempre no topo. A exigência de exibi-lo apenas na área de trabalho, sem sobrepor outros aplicativos, foi adiada. A integração experimental com o Explorer foi removida.
-
 ## Autor
 
 Desenvolvido por **Gabriel Braga** como projeto de aprendizado e portfólio.
