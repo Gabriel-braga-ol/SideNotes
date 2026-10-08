@@ -105,5 +105,18 @@ namespace SideNotes.Views
                     "SideNotes");
             }
         }
+
+        private void ToggleDeskPin_Click(object sender, RoutedEventArgs e)
+        {
+            if (!viewModel.TryToggleSelectedNoteDeskPin(out string? message))
+            {
+                MessageBox.Show(
+                    this,
+                    message ?? "Não foi possível alterar a fixação da nota.",
+                    "SideNotes",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
     }
 }

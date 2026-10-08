@@ -229,6 +229,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBox x:Name="TitleTextBox"
@@ -261,6 +262,98 @@
                          TextWrapping="Wrap"
                          VerticalContentAlignment="Top"
                          VerticalScrollBarVisibility="Hidden"/>
+
+                <Button Grid.Row="2"
+                        Width="40"
+                        Height="40"
+                        HorizontalAlignment="Right"
+                        Margin="0,16,0,0"
+                        Cursor="Hand"
+                        Click="ToggleDeskPin_Click">
+
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#B3ECEDEF"/>
+                            <Setter Property="Foreground" Value="#7D828A"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="ToolTip" Value="Fixar no Desk"/>
+                            <Setter Property="AutomationProperties.Name"
+                    Value="Fixar no Desk"/>
+
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
+                                             Value="True">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#626870"/>
+                                    <Setter Property="ToolTip" Value="Desafixar do Desk"/>
+                                    <Setter Property="AutomationProperties.Name"
+                                            Value="Desafixar do Desk"/>
+                                </DataTrigger>
+
+                                <DataTrigger Binding="{Binding SelectedNote}"
+                                             Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Circle"
+                                    CornerRadius="20"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1">
+
+                                <Viewbox Width="21"
+                                         Height="21"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center">
+                                    <Canvas Width="24" Height="24">
+                                        <Path x:Name="PinIcon"
+                                              Data="M 9,3 L 15,3 L 14,9 L 17,13
+                                                    L 17,15 L 7,15 L 7,13 L 10,9 Z
+                                                    M 12,15 L 12,21"
+                                              Fill="Transparent"
+                                              Stroke="{TemplateBinding Foreground}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round">
+                                            <Path.RenderTransform>
+                                                <RotateTransform Angle="35"
+                                                                 CenterX="12"
+                                                                 CenterY="12"/>
+                                            </Path.RenderTransform>
+                                        </Path>
+                                    </Canvas>
+                                </Viewbox>
+                            </Border>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Circle"
+                                            Property="Background"
+                                            Value="#E6ECEDEF"/>
+                                </Trigger>
+
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Circle"
+                                            Property="Opacity"
+                                            Value="0.7"/>
+                                </Trigger>
+
+                                <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
+                                             Value="True">
+                                    <Setter TargetName="PinIcon"
+                                            Property="Fill"
+                                            Value="#626870"/>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </Grid>
         </Border>
 

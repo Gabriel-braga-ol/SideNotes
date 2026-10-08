@@ -19,6 +19,8 @@ namespace SideNotes.ViewModels
         public event Action<string>? SaveFailed;
         private string searchText = string.Empty;
         private bool hasUnsavedChanges;
+        private const int MaxDeskPinnedNotes = 5;
+        private int PinnedNotesCount => Notes.Count(note => note.IsPinnedToDesk);
         public event PropertyChangedEventHandler? PropertyChanged;
 
 
@@ -246,6 +248,30 @@ namespace SideNotes.ViewModels
 
             return note.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                    note.Content.Contains(query, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public bool TryToggleSelectedNoteDeskPin(out string? message)
+        {
+            message = null;
+
+            if (SelectedNote is null)
+            {
+                message = "Selecione uma nota primeiro.";
+                return false;
+            }
+
+            if (!SelectedNote.IsPinnedToDesk && PinnedNotesCount >= MaxDeskPinnedNotes)
+            {
+                message = $"Você pode fixar no máximo {MaxDeskPinnedNotes} notas no Desk.";
+                return false;
+            }
+
+            SelectedNote.IsPinnedToDesk = !SelectedNote.IsPinnedToDesk;
+
+            hasUnsavedChanges = true;
+            SaveNotesAndNotifyFailure();
+
+            return true;
         }
     }
 }

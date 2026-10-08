@@ -11,6 +11,22 @@ namespace SideNotes.Models
         private string content = string.Empty;
         public string Color { get; set; } = "#B8E6D0";
         public event PropertyChangedEventHandler? PropertyChanged;
+        private bool isPinnedToDesk;
+
+        public bool IsPinnedToDesk
+        {
+            get => isPinnedToDesk;
+            set
+            {
+                if (isPinnedToDesk == value) return;          
+
+                isPinnedToDesk = value;
+
+                PropertyChanged?.Invoke(
+                    this,
+                    new PropertyChangedEventArgs(nameof(IsPinnedToDesk)));
+            }
+        }
 
 
         public string Title
