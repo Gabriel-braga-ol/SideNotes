@@ -48,6 +48,11 @@ namespace SideNotes.ViewModels
             LoadWarningMessage = warningMessage;
             
             autoSaveTimer.Tick += AutoSaveTimer_Tick;
+
+            foreach (Note note in Notes)
+            {
+                note.PropertyChanged += OnNotePropertyChanged;
+            }
             
             SelectedNote = Notes.FirstOrDefault();
         }
@@ -62,6 +67,8 @@ namespace SideNotes.ViewModels
                 Content = "",
                 Color = noteColors[Notes.Count % noteColors.Length]
             };
+
+            note.PropertyChanged += OnNotePropertyChanged;
 
             Notes.Add(note);
             hasUnsavedChanges = true;
@@ -78,7 +85,7 @@ namespace SideNotes.ViewModels
             set => SetSelectedNote(value);
         }
 
-        private void OnSelectedNotePropertyChanged(
+        private void OnNotePropertyChanged(
             object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(Note.Title) ||
@@ -125,12 +132,6 @@ namespace SideNotes.ViewModels
         private void AutoSaveTimer_Tick(object? sender, EventArgs e)
         {
             autoSaveTimer.Stop();
-
-            if (SelectedNote is null)
-            {
-                return;
-            }
-
             SaveNotesAndNotifyFailure();
         }
         
@@ -141,17 +142,16 @@ namespace SideNotes.ViewModels
 
         public void DeleteSelectedNote()
         {
-            if (SelectedNote is null)
-            {
-                return;
-            }
+            if (SelectedNote is null) return;
 
             Note noteToDelete = SelectedNote;
 
             var visibleNotes = FilteredNotes.Cast<Note>().ToList();
-            int index = Notes.IndexOf(noteToDelete);
+            int index = visibleNotes.IndexOf(noteToDelete);
 
             SetSelectedNote(null, savePreviousNote: false);
+
+            noteToDelete.PropertyChanged -= OnNotePropertyChanged;
 
             hasUnsavedChanges = true;
             Notes.Remove(noteToDelete);
@@ -169,10 +169,7 @@ namespace SideNotes.ViewModels
 
         private void SaveNotesAndNotifyFailure()
         {
-            if (!hasUnsavedChanges)
-            {
-                return;
-            }
+            if (!hasUnsavedChanges) return;         
             
             if (!TrySaveNotes(out string? errorMessage))
             {
@@ -188,29 +185,14 @@ namespace SideNotes.ViewModels
 
         private void SetSelectedNote(Note? value, bool savePreviousNote = true)
         {
-            if (selectedNote == value)
-            {
-                return;
-            }
-                
-            autoSaveTimer.Stop();
+            if (selectedNote == value) return;                     
 
             if (savePreviousNote && selectedNote is not null && Notes.Contains(selectedNote))
             {
                 SaveNotesAndNotifyFailure();
             }
 
-            if (selectedNote is not null)
-            {
-                selectedNote.PropertyChanged -= OnSelectedNotePropertyChanged;
-            }
-
             selectedNote = value;
-
-            if (selectedNote is not null)
-            {
-                selectedNote.PropertyChanged += OnSelectedNotePropertyChanged;
-            }
 
             PropertyChanged?.Invoke(
                 this,
@@ -222,10 +204,7 @@ namespace SideNotes.ViewModels
             get => searchText;
             set
             {
-                if (searchText == value)
-                {
-                    return;
-                }
+                if (searchText == value) return;
 
                 searchText = value;
                 FilteredNotes.Refresh();
