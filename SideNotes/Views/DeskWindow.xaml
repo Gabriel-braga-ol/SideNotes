@@ -18,41 +18,215 @@
 
     <Grid x:Name="DeskRoot">
 
+        <!-- Editor da nota aberta no Desk -->
+        <Border x:Name="NoteEditor"
+                Width="320"
+                Margin="0,8,256,8"
+                HorizontalAlignment="Left"
+                Background="{Binding Color}"
+                CornerRadius="16"
+                Padding="20"
+                Visibility="Collapsed">
+
+            <Border.RenderTransform>
+                <TranslateTransform/>
+            </Border.RenderTransform>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Button Grid.Row="0"
+                        Content="✕"
+                        Width="28"
+                        Height="28"
+                        HorizontalAlignment="Right"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="#31544B"
+                        Cursor="Hand"
+                        ToolTip="Fechar nota"
+                        AutomationProperties.Name="Fechar nota no Desk"
+                        Click="CloseNote_Click"/>
+
+                <TextBox Grid.Row="1"
+                         Text="{Binding Title,
+                                        Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="20"
+                         FontWeight="SemiBold"
+                         Foreground="#1E3A34"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         TextWrapping="Wrap"
+                         MaxHeight="90"
+                         VerticalScrollBarVisibility="Hidden"
+                         Margin="0,8,0,16"
+                         AutomationProperties.Name="Título da nota"/>
+
+                <TextBox Grid.Row="2"
+                         Text="{Binding Content,
+                                        Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="15"
+                         Foreground="#31544B"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalContentAlignment="Top"
+                         VerticalScrollBarVisibility="Hidden"
+                         AutomationProperties.Name="Conteúdo da nota"/> 
+            </Grid>
+        </Border>
+
         <!-- Abas das notas fixadas -->
         <ItemsControl x:Name="NoteTabs"
                       ItemsSource="{Binding DeskNotes}"
                       Visibility="Collapsed"
-                      Width="64"
-                      Margin="0,0,24,28"
+                      Width="248"
+                      Height="400"
                       HorizontalAlignment="Right"
-                      VerticalAlignment="Center">
+                      VerticalAlignment="Center"
+                      ClipToBounds="False">
+
+            <ItemsControl.RenderTransform>
+                <TranslateTransform/>
+            </ItemsControl.RenderTransform>
+
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Canvas ClipToBounds="False"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Panel.ZIndex" Value="0"/>
+                    <Setter Property="ClipToBounds" Value="False"/>
+
+                    <EventSetter Event="Loaded"
+                                 Handler="NoteContainer_Loaded"/>
+
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Panel.ZIndex" Value="100"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ItemsControl.ItemContainerStyle>
 
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <!-- A altura menor que a aba cria a sobreposição -->
-                    <Grid Height="66">
-                        <Border Height="92"
+
+                    <!-- Espaço suficiente para o cartão inteiro. -->
+                    <Grid Width="240"
+                          Height="160"
+                          ClipToBounds="False">
+
+                        <Border x:Name="NoteCard"
+                                Width="32"
+                                Height="104"
                                 VerticalAlignment="Top"
+                                HorizontalAlignment="{Binding HorizontalAlignment,
+                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                 Background="{Binding Color}"
-                                CornerRadius="12"
+                                CornerRadius="10"
                                 BorderBrush="#18000000"
                                 BorderThickness="1"
-                                ToolTip="{Binding Title}">
+                                Cursor="Hand"
+                                MouseLeftButtonDown="NoteTab_MouseLeftButtonDown">
 
-                            <TextBlock Text="{Binding Title}"
-                                       Width="64"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Foreground="#31544B"
-                                       TextTrimming="CharacterEllipsis"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center">
-                                <TextBlock.LayoutTransform>
-                                    <RotateTransform Angle="-90"/>
-                                </TextBlock.LayoutTransform>
-                            </TextBlock>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- A aba vertical permanece na prévia. -->
+                                <Border Grid.Column="0"
+                                        BorderBrush="#14000000"
+                                        BorderThickness="0,0,1,0">
+
+                                    <TextBlock Text="{Binding Title}"
+                                               Width="44"
+                                               Margin="0,8,0,0"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="#31544B"
+                                               TextTrimming="CharacterEllipsis"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Top">
+
+                                        <TextBlock.LayoutTransform>
+                                            <RotateTransform Angle="-90"/>
+                                        </TextBlock.LayoutTransform>
+                                    </TextBlock>
+                                </Border>
+
+                                <!-- Conteúdo da prévia. -->
+                                <Grid x:Name="NotePreview"
+                                      Grid.Column="1"
+                                      Margin="12,12,14,12"
+                                      Visibility="Collapsed"
+                                      IsHitTestVisible="False"
+                                      ClipToBounds="True">
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0"
+                                               Text="{Binding Title}"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Foreground="#1E3A34"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="{Binding Content}"
+                                               FontSize="13"
+                                               Foreground="#31544B"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Grid>
                         </Border>
                     </Grid>
+
+                    <DataTemplate.Triggers>
+                        <Trigger SourceName="NoteCard"
+                                 Property="IsMouseOver"
+                                 Value="True">
+
+                            <Setter TargetName="NoteCard"
+                                    Property="Width"
+                                    Value="240"/>
+
+                            <Setter TargetName="NoteCard"
+                                    Property="Height"
+                                    Value="160"/>
+
+                            <Setter TargetName="NotePreview"
+                                    Property="Visibility"
+                                    Value="Visible"/>
+
+                            <Setter TargetName="NoteCard"
+                                    Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#000000"
+                                                      BlurRadius="12"
+                                                      ShadowDepth="3"
+                                                      Opacity="0.20"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
