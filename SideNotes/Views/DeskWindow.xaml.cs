@@ -7,10 +7,8 @@ using SideNotes.ViewModels;
 using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Collections.Specialized;
-using System.Diagnostics;
-using System.IO;
-using System.Text.Json;
 using SideNotes.Models;
+using SideNotes.Services;
 
 namespace SideNotes.Views
 {
@@ -22,7 +20,7 @@ namespace SideNotes.Views
         private const double ScreenMargin = 8;
 
         private readonly MainViewModel viewModel;
-
+        private readonly DeskSettingsStore settingsStore = new();
         private bool isOnRight = true;
         private bool isExpanded;
         private bool isDragging;
@@ -38,20 +36,6 @@ namespace SideNotes.Views
                 Interval = TimeSpan.FromMilliseconds(450)
             };
 
-        private static readonly string DeskPositionPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SideNotes",
-                "desk_position.json");
-
-        private sealed class DeskPosition
-        {
-            public DeskPosition()
-            {
-            }
-
-            public bool IsOnRight { get; set; } = true;
-            public double VerticalPosition { get; set; } = 0.5;
-        }
 
         public DeskWindow(MainViewModel viewModel)
         {
@@ -72,7 +56,7 @@ namespace SideNotes.Views
                 Height,
                 Math.Max(1, workArea.Height - ScreenMargin * 2));
 
-            DeskPosition position = LoadDeskPosition();
+            DeskPosition position = settingsStore.Load();
 
             isOnRight = position.IsOnRight;
 
@@ -509,9 +493,7 @@ namespace SideNotes.Views
         {
             Rect workArea = SystemParameters.WorkArea;
 
-            double availableHeight = Math.Max(
-                0,
-                workArea.Height - Height - ScreenMargin * 2);
+            double availableHeight = Math.Max(0, workArea.Height - Height - ScreenMargin * 2);
 
             double verticalPosition = availableHeight > 0
                 ? (Top - workArea.Top - ScreenMargin) / availableHeight
@@ -523,62 +505,9 @@ namespace SideNotes.Views
                 VerticalPosition = Math.Clamp(verticalPosition, 0, 1)
             };
 
-            try
-            {
-                string folder = Path.GetDirectoryName(DeskPositionPath)!;
-                Directory.CreateDirectory(folder);
-
-                string json = JsonSerializer.Serialize(
-                    position,
-                    new JsonSerializerOptions { WriteIndented = true });
-
-                File.WriteAllText(DeskPositionPath, json);
-            }
-            catch (Exception ex) when (
-                ex is IOException ||
-                ex is UnauthorizedAccessException)
-            {
-                Debug.WriteLine(
-                    $"Não foi possível salvar a posição do Desk: {ex.Message}");
-            }
+            settingsStore.Save(position);
         }
 
-        private DeskPosition LoadDeskPosition()
-        {
-            try
-            {
-                if (!File.Exists(DeskPositionPath))
-                {
-                    return new DeskPosition();
-                }
-
-                string json = File.ReadAllText(DeskPositionPath);
-
-                var position =
-                    JsonSerializer.Deserialize<DeskPosition>(json);
-
-                if (position is null ||
-                    !double.IsFinite(position.VerticalPosition))
-                {
-                    return new DeskPosition();
-                }
-
-                position.VerticalPosition = Math.Clamp(
-                    position.VerticalPosition, 0, 1);
-
-                return position;
-            }
-            catch (Exception ex) when (
-                ex is IOException ||
-                ex is UnauthorizedAccessException ||
-                ex is JsonException)
-            {
-                Debug.WriteLine(
-                    $"Não foi possível carregar a posição do Desk: {ex.Message}");
-
-                return new DeskPosition();
-            }
-        }
 
         private void Pill_MouseRightButtonDown(
             object sender,
