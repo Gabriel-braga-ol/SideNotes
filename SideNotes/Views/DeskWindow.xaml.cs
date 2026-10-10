@@ -7,6 +7,9 @@ using SideNotes.ViewModels;
 using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 using SideNotes.Models;
 
 namespace SideNotes.Views
@@ -25,6 +28,8 @@ namespace SideNotes.Views
         private bool isDragging;
         private int fanAnimationVersion;
         private int editorAnimationVersion;
+        private Point dragStartMouse;
+        private Point dragStartWindow;
         private Note? openedNote;
 
         private readonly DispatcherTimer collapseTimer =
@@ -32,6 +37,21 @@ namespace SideNotes.Views
             {
                 Interval = TimeSpan.FromMilliseconds(450)
             };
+
+        private static readonly string DeskPositionPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SideNotes",
+                "desk_position.json");
+
+        private sealed class DeskPosition
+        {
+            public DeskPosition()
+            {
+            }
+
+            public bool IsOnRight { get; set; } = true;
+            public double VerticalPosition { get; set; } = 0.5;
+        }
 
         public DeskWindow(MainViewModel viewModel)
         {
@@ -50,9 +70,17 @@ namespace SideNotes.Views
 
             Height = Math.Min(
                 Height,
-                workArea.Height - ScreenMargin * 2);
+                Math.Max(1, workArea.Height - ScreenMargin * 2));
 
-            Top = workArea.Top + (workArea.Height - Height) / 2;
+            DeskPosition position = LoadDeskPosition();
+
+            isOnRight = position.IsOnRight;
+
+            double availableHeight = Math.Max(
+                0,
+                workArea.Height - Height - ScreenMargin * 2);
+
+            Top = workArea.Top + ScreenMargin + availableHeight * position.VerticalPosition;
 
             UpdateSideLayout();
             SnapToEdge();
@@ -60,12 +88,7 @@ namespace SideNotes.Views
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
-            collapseTimer.Stop();
-
-            if (!isDragging && !viewModel.DeskNotes.IsEmpty)
-            {
-                SetExpanded(true);
-            }
+            collapseTimer.Stop();     
         }
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
@@ -178,33 +201,15 @@ namespace SideNotes.Views
         }
 
         private void Pill_MouseLeftButtonDown(
-            object sender, MouseButtonEventArgs e)
+            object sender,
+            MouseButtonEventArgs e)
         {
-            if (e.ButtonState != MouseButtonState.Pressed) return;        
-
             e.Handled = true;
+
+            if (isDragging || viewModel.DeskNotes.IsEmpty) return;    
+
             collapseTimer.Stop();
-            isDragging = true;
-
-            CloseDeskNote(immediate: true);
-
-            try
-            {
-                DragMove();
-            }
-            finally
-            {
-                isDragging = false;
-
-                Rect workArea = SystemParameters.WorkArea;
-                double windowCenter = Left + Width / 2;
-                double screenCenter = workArea.Left + workArea.Width / 2;
-
-                isOnRight = windowCenter >= screenCenter;
-
-                UpdateSideLayout();
-                SnapToEdge();
-            }
+            SetExpanded(true);
         }
 
         private void UpdateSideLayout()
@@ -498,6 +503,172 @@ namespace SideNotes.Views
                 Canvas.SetLeft(container, 4);
                 Canvas.SetTop(container, padding + i * spacing);
             }
+        }
+
+        private void SaveDeskPosition()
+        {
+            Rect workArea = SystemParameters.WorkArea;
+
+            double availableHeight = Math.Max(
+                0,
+                workArea.Height - Height - ScreenMargin * 2);
+
+            double verticalPosition = availableHeight > 0
+                ? (Top - workArea.Top - ScreenMargin) / availableHeight
+                : 0.5;
+
+            var position = new DeskPosition
+            {
+                IsOnRight = isOnRight,
+                VerticalPosition = Math.Clamp(verticalPosition, 0, 1)
+            };
+
+            try
+            {
+                string folder = Path.GetDirectoryName(DeskPositionPath)!;
+                Directory.CreateDirectory(folder);
+
+                string json = JsonSerializer.Serialize(
+                    position,
+                    new JsonSerializerOptions { WriteIndented = true });
+
+                File.WriteAllText(DeskPositionPath, json);
+            }
+            catch (Exception ex) when (
+                ex is IOException ||
+                ex is UnauthorizedAccessException)
+            {
+                Debug.WriteLine(
+                    $"Não foi possível salvar a posição do Desk: {ex.Message}");
+            }
+        }
+
+        private DeskPosition LoadDeskPosition()
+        {
+            try
+            {
+                if (!File.Exists(DeskPositionPath))
+                {
+                    return new DeskPosition();
+                }
+
+                string json = File.ReadAllText(DeskPositionPath);
+
+                var position =
+                    JsonSerializer.Deserialize<DeskPosition>(json);
+
+                if (position is null ||
+                    !double.IsFinite(position.VerticalPosition))
+                {
+                    return new DeskPosition();
+                }
+
+                position.VerticalPosition = Math.Clamp(
+                    position.VerticalPosition, 0, 1);
+
+                return position;
+            }
+            catch (Exception ex) when (
+                ex is IOException ||
+                ex is UnauthorizedAccessException ||
+                ex is JsonException)
+            {
+                Debug.WriteLine(
+                    $"Não foi possível carregar a posição do Desk: {ex.Message}");
+
+                return new DeskPosition();
+            }
+        }
+
+        private void Pill_MouseRightButtonDown(
+            object sender,
+            MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+
+            if (isDragging) return;
+
+            collapseTimer.Stop();
+            isDragging = true;
+
+            CloseDeskNote(immediate: true);
+
+            dragStartMouse = PointToScreen(e.GetPosition(this));
+
+            dragStartWindow = new Point(Left, Top);
+
+            if (!PillHandle.CaptureMouse())
+            {
+                isDragging = false;
+            }
+        }
+
+        private void Pill_MouseMove(
+            object sender,
+            MouseEventArgs e)
+        {
+            if (!isDragging) return;
+
+            if (e.RightButton != MouseButtonState.Pressed)
+            {
+                FinishPillDrag();
+                return;
+            }
+
+            Point currentMouse = PointToScreen(e.GetPosition(this));
+
+            Vector movement = currentMouse - dragStartMouse;
+
+            var source = PresentationSource.FromVisual(this);
+
+            if (source?.CompositionTarget is { } target)
+            {
+                movement = target.TransformFromDevice.Transform(movement);
+            }
+
+            Left = dragStartWindow.X + movement.X;
+            Top = dragStartWindow.Y + movement.Y;
+
+            e.Handled = true;
+        }
+
+        private void Pill_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!isDragging) return;
+
+            e.Handled = true;
+            FinishPillDrag();
+        }
+
+        private void Pill_LostMouseCapture(object sender, MouseEventArgs e)
+        {
+            if (isDragging && !PillHandle.IsMouseCaptured)
+            {
+                FinishPillDrag();
+            }
+        }
+
+        private void FinishPillDrag()
+        {
+            if (!isDragging) return;
+
+            isDragging = false;
+
+            if (PillHandle.IsMouseCaptured)
+            {
+                PillHandle.ReleaseMouseCapture();
+            }
+
+            Rect workArea = SystemParameters.WorkArea;
+
+            double windowCenter = Left + Width / 2;
+            double screenCenter = workArea.Left + workArea.Width / 2;
+
+            isOnRight = windowCenter >= screenCenter;
+
+            UpdateSideLayout();
+            SnapToEdge();
+            SaveDeskPosition();
         }
     }
 }

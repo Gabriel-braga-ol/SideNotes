@@ -239,8 +239,13 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 Cursor="SizeAll"
-                ToolTip="Arraste para mudar de lado ou de altura"
-                MouseLeftButtonDown="Pill_MouseLeftButtonDown">
+                MouseLeftButtonDown="Pill_MouseLeftButtonDown"
+                MouseRightButtonDown="Pill_MouseRightButtonDown"
+                MouseRightButtonUp="Pill_MouseRightButtonUp"
+                MouseMove="Pill_MouseMove"
+                LostMouseCapture="Pill_LostMouseCapture"
+                ContextMenuService.IsEnabled="False">
+
 
             <Border Background="#99727884"
                     CornerRadius="6"
