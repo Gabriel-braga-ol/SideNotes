@@ -16,11 +16,13 @@ namespace SideNotes
             StartupEventArgs e)
         {
             MainViewModel viewModel;
+            DeskViewModel deskViewModel;
 
             try
             {
                 notesRepository = new NotesRepository();
                 viewModel = new MainViewModel(notesRepository);
+                deskViewModel = new DeskViewModel(notesRepository);
             }
             catch (Exception ex) when (
                 ex is IOException ||
@@ -42,7 +44,8 @@ namespace SideNotes
             MainWindow window = new MainWindow(viewModel);
             window.Show();
 
-            DeskWindow deskWindow = new DeskWindow(viewModel);
+            DeskWindow deskWindow = new DeskWindow(deskViewModel);
+            deskWindow.Closed += (_, _) => deskViewModel.Dispose();
             deskWindow.Show();
 
             window.Closed += (_, _) => deskWindow.Close();

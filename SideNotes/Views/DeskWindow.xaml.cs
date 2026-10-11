@@ -15,20 +15,26 @@ namespace SideNotes.Views
     public partial class DeskWindow : Window
     {
         private const double CollapsedWidth = 24;
+
         private const double ExpandedWidth = 256;
+
         private const double EditorWidth = 576;
+
         private const double ScreenMargin = 8;
 
-        private readonly MainViewModel viewModel;
+        private readonly DeskViewModel viewModel;
+
         private readonly DeskSettingsStore settingsStore = new();
-        private bool isOnRight = true;
-        private bool isExpanded;
+
         private bool isDragging;
+
         private int fanAnimationVersion;
+
         private int editorAnimationVersion;
+
         private Point dragStartMouse;
+
         private Point dragStartWindow;
-        private Note? openedNote;
 
         private readonly DispatcherTimer collapseTimer =
             new DispatcherTimer
@@ -37,7 +43,7 @@ namespace SideNotes.Views
             };
 
 
-        public DeskWindow(MainViewModel viewModel)
+        public DeskWindow(DeskViewModel viewModel)
         {
             InitializeComponent();
 
@@ -58,7 +64,7 @@ namespace SideNotes.Views
 
             DeskPosition position = settingsStore.Load();
 
-            isOnRight = position.IsOnRight;
+            viewModel.IsOnRight = position.IsOnRight;
 
             double availableHeight = Math.Max(
                 0,
@@ -88,15 +94,12 @@ namespace SideNotes.Views
         {
             collapseTimer.Stop();
 
-            if (!IsMouseOver && !isDragging)
-            {
-                SetExpanded(false);
-            }
+            if (!IsMouseOver && !isDragging) SetExpanded(false);
         }
 
         private void SetExpanded(bool expanded)
         {
-            if (openedNote is not null)
+            if (viewModel.OpenedNote is not null)
             {
                 expanded = true;
             }
@@ -107,24 +110,21 @@ namespace SideNotes.Views
                 PillHandle.IsHitTestVisible = false;
 
                 SetDeskWidth(
-                    openedNote is not null
+                    viewModel.OpenedNote is not null
                         ? EditorWidth
                         : ExpandedWidth);
             }
 
-            if (isExpanded == expanded)
-            {
-                return;
-            }
+            if (viewModel.IsExpanded == expanded) return;
 
-            isExpanded = expanded;
+            viewModel.IsExpanded = expanded;
 
             int version = ++fanAnimationVersion;
 
             var transform =
                 (TranslateTransform)NoteTabs.RenderTransform;
 
-            double hiddenOffset = isOnRight ? 36 : -36;
+            double hiddenOffset = viewModel.IsOnRight ? 36 : -36;
 
             if (expanded)
             {
@@ -168,10 +168,7 @@ namespace SideNotes.Views
                     () =>
                     {
                         if (version != fanAnimationVersion ||
-                            isExpanded)
-                        {
-                            return;
-                        }
+                            viewModel.IsExpanded) return;
 
                         NoteTabs.Visibility = Visibility.Collapsed;
                         DeskRoot.Background = null;
@@ -198,21 +195,21 @@ namespace SideNotes.Views
 
         private void UpdateSideLayout()
         {
-            PillHandle.HorizontalAlignment = isOnRight
+            PillHandle.HorizontalAlignment = viewModel.IsOnRight
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
 
-            NoteTabs.HorizontalAlignment = isOnRight
+            NoteTabs.HorizontalAlignment = viewModel.IsOnRight
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
 
-            NoteEditor.HorizontalAlignment = isOnRight
+            NoteEditor.HorizontalAlignment = viewModel.IsOnRight
                 ? HorizontalAlignment.Left
                 : HorizontalAlignment.Right;
 
             NoteTabs.Margin = new Thickness(0);
 
-            NoteEditor.Margin = isOnRight
+            NoteEditor.Margin = viewModel.IsOnRight
                 ? new Thickness(0, 8, ExpandedWidth, 8)
                 : new Thickness(ExpandedWidth, 8, 0, 8);
         }
@@ -221,7 +218,7 @@ namespace SideNotes.Views
         {
             Rect workArea = SystemParameters.WorkArea;
 
-            Left = isOnRight
+            Left = viewModel.IsOnRight
                 ? workArea.Right - Width - ScreenMargin
                 : workArea.Left + ScreenMargin;
 
@@ -261,7 +258,7 @@ namespace SideNotes.Views
             bool wasVisible =
                 NoteEditor.Visibility == Visibility.Visible;
 
-            openedNote = note;
+            viewModel.OpenedNote = note;
             NoteEditor.DataContext = note;
             NoteEditor.IsHitTestVisible = true;
 
@@ -274,7 +271,7 @@ namespace SideNotes.Views
             if (!wasVisible)
             {
                 NoteEditor.Opacity = 0;
-                transform.X = isOnRight ? 24 : -24;
+                transform.X = viewModel.IsOnRight ? 24 : -24;
             }
 
             NoteEditor.Visibility = Visibility.Visible;
@@ -300,16 +297,13 @@ namespace SideNotes.Views
         {
             int version = ++editorAnimationVersion;
 
-            if (NoteEditor.IsKeyboardFocusWithin)
-            {
-                Keyboard.ClearFocus();
-            }
+            if (NoteEditor.IsKeyboardFocusWithin) Keyboard.ClearFocus();
 
             NoteEditor.IsHitTestVisible = false;
 
             if (immediate)
             {
-                openedNote = null;
+                viewModel.OpenedNote = null;
                 NoteEditor.Visibility = Visibility.Collapsed;
                 NoteEditor.DataContext = null;
 
@@ -326,7 +320,7 @@ namespace SideNotes.Views
                 return;
             }
 
-            if (openedNote is null)
+            if (viewModel.OpenedNote is null)
             {
                 SetExpanded(false);
                 return;
@@ -338,7 +332,7 @@ namespace SideNotes.Views
             Animate(
                 editorTransform,
                 TranslateTransform.XProperty,
-                isOnRight ? 24 : -24,
+                viewModel.IsOnRight ? 24 : -24,
                 180);
 
             Animate(
@@ -350,7 +344,7 @@ namespace SideNotes.Views
                 {
                     if (version != editorAnimationVersion) return;
                     
-                    openedNote = null;
+                    viewModel.OpenedNote = null;
                     NoteEditor.Visibility = Visibility.Collapsed;
                     NoteEditor.DataContext = null;
                     
@@ -362,7 +356,7 @@ namespace SideNotes.Views
         {
             ++fanAnimationVersion;
 
-            isExpanded = false;
+            viewModel.IsExpanded = false;
 
             NoteTabs.BeginAnimation(
                 UIElement.OpacityProperty, null);
@@ -390,9 +384,9 @@ namespace SideNotes.Views
         {
             Dispatcher.BeginInvoke(new Action(PositionNoteCards));
 
-            if (openedNote is not null &&
-                (!openedNote.IsPinnedToDesk ||
-                 !viewModel.Notes.Contains(openedNote)))
+            if (viewModel.OpenedNote is not null &&
+                (!viewModel.OpenedNote.IsPinnedToDesk ||
+                 !viewModel.Notes.Contains(viewModel.OpenedNote)))
             {
                 CloseDeskNote();
             }
@@ -452,7 +446,7 @@ namespace SideNotes.Views
 
             Width = width;
 
-            if (isOnRight)
+            if (viewModel.IsOnRight)
             {
                 Left = rightEdge - width;
             }
@@ -501,7 +495,7 @@ namespace SideNotes.Views
 
             var position = new DeskPosition
             {
-                IsOnRight = isOnRight,
+                IsOnRight = viewModel.IsOnRight,
                 VerticalPosition = Math.Clamp(verticalPosition, 0, 1)
             };
 
@@ -571,10 +565,7 @@ namespace SideNotes.Views
 
         private void Pill_LostMouseCapture(object sender, MouseEventArgs e)
         {
-            if (isDragging && !PillHandle.IsMouseCaptured)
-            {
-                FinishPillDrag();
-            }
+            if (isDragging && !PillHandle.IsMouseCaptured) FinishPillDrag();
         }
 
         private void FinishPillDrag()
@@ -583,17 +574,14 @@ namespace SideNotes.Views
 
             isDragging = false;
 
-            if (PillHandle.IsMouseCaptured)
-            {
-                PillHandle.ReleaseMouseCapture();
-            }
+            if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
 
             Rect workArea = SystemParameters.WorkArea;
 
             double windowCenter = Left + Width / 2;
             double screenCenter = workArea.Left + workArea.Width / 2;
 
-            isOnRight = windowCenter >= screenCenter;
+            viewModel.IsOnRight = windowCenter >= screenCenter;
 
             UpdateSideLayout();
             SnapToEdge();

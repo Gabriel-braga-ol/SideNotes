@@ -24,8 +24,6 @@ namespace SideNotes.ViewModels
 
         public ICollectionView FilteredNotes { get; }
 
-        public ICollectionView DeskNotes { get; }
-
         private int PinnedNotesCount =>
             Notes.Count(note => note.IsPinnedToDesk);
 
@@ -40,12 +38,6 @@ namespace SideNotes.ViewModels
         public MainViewModel(NotesRepository repository)
         {
             this.repository = repository;
-
-            DeskNotes = new ListCollectionView(Notes)
-            {
-                Filter = item =>
-                    item is Note note && note.IsPinnedToDesk
-            };
 
             FilteredNotes = new ListCollectionView(Notes)
             {
@@ -174,7 +166,6 @@ namespace SideNotes.ViewModels
             SelectedNote.IsPinnedToDesk =
                 !SelectedNote.IsPinnedToDesk;
 
-            DeskNotes.Refresh();
             repository.SavePendingChanges();
 
             return true;
