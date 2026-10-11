@@ -12,7 +12,7 @@ namespace SideNotes.Services
         private static readonly string FilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "SideNotes",
-            "desk_settings.json");
+            "desk_position.json");
 
         public DeskPosition Load()
         {
