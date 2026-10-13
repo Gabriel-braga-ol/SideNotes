@@ -21,6 +21,8 @@ namespace SideNotes.Services
 
         public event Action<string>? SaveFailed;
 
+        public event Action<Note, string?>? NoteChanged;
+
         private bool hasUnsavedChanges;
 
         private readonly HashSet<Note> trackedNotes = new();
@@ -105,7 +107,11 @@ namespace SideNotes.Services
             object? sender,
             PropertyChangedEventArgs e)
         {
+            if (sender is not Note note) return;
+
             ScheduleAutoSave();
+
+            NoteChanged?.Invoke(note, e.PropertyName);
         }
 
         private void ScheduleAutoSave()

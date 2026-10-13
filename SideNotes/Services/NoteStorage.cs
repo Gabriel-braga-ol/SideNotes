@@ -10,11 +10,11 @@ namespace SideNotes.Services
 {
     public static class NoteStorage 
     {
-        private static readonly string FolderPath = 
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideNotes");
-        
+        private static readonly string FolderPath =
+            AppPaths.DataDirectory;
+
         private static readonly string FilePath =
-            Path.Combine(FolderPath,  "notes.json");
+            AppPaths.NotesFilePath;
 
         public static void Save(List<Note> notes)
         {

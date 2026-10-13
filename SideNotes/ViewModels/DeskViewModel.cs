@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Data;
 using SideNotes.Models;
@@ -14,7 +12,6 @@ namespace SideNotes.ViewModels
     public sealed class DeskViewModel : INotifyPropertyChanged, IDisposable
     {
         private readonly NotesRepository repository;
-        private readonly HashSet<Note> trackedNotes = new();
 
         private Note? openedNote;
         private bool isExpanded;
@@ -54,44 +51,15 @@ namespace SideNotes.ViewModels
                     item is Note note && note.IsPinnedToDesk
             };
 
-            UpdateTrackedNotes();
-
-            Notes.CollectionChanged += OnNotesCollectionChanged;
+            repository.NoteChanged += OnNoteChanged;
         }
 
-        private void OnNotesCollectionChanged(
-            object? sender,
-            NotifyCollectionChangedEventArgs e)
+        private void OnNoteChanged(
+            Note note,
+            string? propertyName)
         {
-            UpdateTrackedNotes();
-        }
-
-        private void UpdateTrackedNotes()
-        {
-            foreach (Note note in trackedNotes.ToArray())
-            {
-                if (!Notes.Contains(note))
-                {
-                    note.PropertyChanged -= OnNotePropertyChanged;
-                    trackedNotes.Remove(note);
-                }
-            }
-
-            foreach (Note note in Notes)
-            {
-                if (trackedNotes.Add(note))
-                {
-                    note.PropertyChanged += OnNotePropertyChanged;
-                }
-            }
-        }
-
-        private void OnNotePropertyChanged(
-            object? sender,
-            PropertyChangedEventArgs e)
-        {
-            if (string.IsNullOrEmpty(e.PropertyName) ||
-                e.PropertyName == nameof(Note.IsPinnedToDesk))
+            if (string.IsNullOrEmpty(propertyName) ||
+                propertyName == nameof(Note.IsPinnedToDesk))
             {
                 DeskNotes.Refresh();
             }
@@ -113,14 +81,7 @@ namespace SideNotes.ViewModels
 
         public void Dispose()
         {
-            Notes.CollectionChanged -= OnNotesCollectionChanged;
-
-            foreach (Note note in trackedNotes)
-            {
-                note.PropertyChanged -= OnNotePropertyChanged;
-            }
-
-            trackedNotes.Clear();
+            repository.NoteChanged -= OnNoteChanged;
         }
     }
 }

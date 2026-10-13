@@ -24,7 +24,7 @@ namespace SideNotes.Views
 
         private readonly DeskViewModel viewModel;
 
-        private readonly DeskSettingsStore settingsStore = new();
+        private readonly DeskPositionStore positionStore = new();
 
         private bool isDragging;
 
@@ -62,7 +62,7 @@ namespace SideNotes.Views
                 Height,
                 Math.Max(1, workArea.Height - ScreenMargin * 2));
 
-            DeskPosition position = settingsStore.Load();
+            DeskPosition position = positionStore.Load();
 
             viewModel.IsOnRight = position.IsOnRight;
 
@@ -499,7 +499,7 @@ namespace SideNotes.Views
                 VerticalPosition = Math.Clamp(verticalPosition, 0, 1)
             };
 
-            settingsStore.Save(position);
+            positionStore.Save(position);
         }
 
 

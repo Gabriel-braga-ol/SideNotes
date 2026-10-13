@@ -7,12 +7,10 @@ using SideNotes.Models;
 namespace SideNotes.Services
 {
     // Assume o caminho do arquivo, a leitura, a gravação e a validação da posição carregada.
-    public sealed class DeskSettingsStore
+    public sealed class DeskPositionStore
     {
-        private static readonly string FilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SideNotes",
-            "desk_position.json");
+        private static readonly string FilePath =
+            AppPaths.DeskPositionFilePath;
 
         public DeskPosition Load()
         {
