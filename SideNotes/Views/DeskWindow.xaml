@@ -20,6 +20,7 @@
 
         <!-- Editor da nota aberta no Desk -->
         <Border x:Name="NoteEditor"
+                DataContext="{Binding OpenedNote}"
                 Width="320"
                 Margin="0,8,256,8"
                 HorizontalAlignment="Left"
