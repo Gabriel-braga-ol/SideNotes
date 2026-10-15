@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using SideNotes.Models;
 using SideNotes.Services;
 using System.ComponentModel;
+using System.Windows.Interop;
 
 namespace SideNotes.Views
 {
@@ -22,6 +23,14 @@ namespace SideNotes.Views
         private const double EditorWidth = 576;
 
         private const double ScreenMargin = 8;
+
+        private double currentVerticalPosition = 0.5;
+
+        private const int WmDisplayChange = 0x007E;
+
+        private const int WmSettingChange = 0x001A;
+
+        private const int SpiSetWorkArea = 0x002F;
 
         private readonly DeskViewModel viewModel;
 
@@ -37,21 +46,35 @@ namespace SideNotes.Views
 
         private Point dragStartWindow;
 
+        private DeskScreen? currentScreen;
+
+        private HwndSource? windowSource;
+
+        private readonly double preferredHeight;
+
         private readonly DispatcherTimer collapseTimer =
             new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(450)
             };
 
+        private readonly DispatcherTimer screenChangeTimer = new()
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
 
         public DeskWindow(DeskViewModel viewModel)
         {
             InitializeComponent();
 
+            preferredHeight = Height;
+
             this.viewModel = viewModel;
             DataContext = viewModel;
 
             collapseTimer.Tick += CollapseTimer_Tick;
+            screenChangeTimer.Tick += ScreenChangeTimer_Tick;
+
             viewModel.DeskNotes.CollectionChanged += DeskNotes_CollectionChanged;
 
             viewModel.PropertyChanged += ViewModel_PropertyChanged;
@@ -59,24 +82,21 @@ namespace SideNotes.Views
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            Rect workArea = SystemParameters.WorkArea;
-
-            Height = Math.Min(
-                Height,
-                Math.Max(1, workArea.Height - ScreenMargin * 2));
-
             DeskPosition position = positionStore.Load();
+
+            currentScreen = DeskScreenService.FindOrPrimary(position.MonitorDeviceName);
+
+            Rect area = currentScreen.WorkArea;
+
+            DeskScreenService.MoveWindow(
+                this,
+                area.Left,
+                area.Top);
 
             viewModel.SetSide(position.IsOnRight);
 
-            double availableHeight = Math.Max(
-                0,
-                workArea.Height - Height - ScreenMargin * 2);
-
-            Top = workArea.Top + ScreenMargin + availableHeight * position.VerticalPosition;
-
             UpdateSideLayout();
-            SnapToEdge();
+            SnapToEdge(position.VerticalPosition);
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
@@ -208,20 +228,55 @@ namespace SideNotes.Views
                 : new Thickness(ExpandedWidth, 8, 0, 8);
         }
 
-        private void SnapToEdge()
+        private void SnapToEdge(double? verticalPosition = null, double? widthInDips = null)
         {
-            Rect workArea = SystemParameters.WorkArea;
+            if (currentScreen is null) return;
 
-            Left = viewModel.IsOnRight
-                ? workArea.Right - Width - ScreenMargin
-                : workArea.Left + ScreenMargin;
+            Rect area = currentScreen.WorkArea;
+            Rect bounds = DeskScreenService.GetWindowBounds(this);
 
-            double minTop = workArea.Top + ScreenMargin;
-            double maxTop = Math.Max(
-                minTop,
-                workArea.Bottom - Height - ScreenMargin);
+            var dpi = VisualTreeHelper.GetDpi(this);
 
-            Top = Math.Clamp(Top, minTop, maxTop);
+            double marginX = Math.Round(ScreenMargin * dpi.DpiScaleX);
+            double marginY = Math.Round(ScreenMargin * dpi.DpiScaleY);
+
+            double widthPixels = widthInDips.HasValue
+                ? Math.Max(1, Math.Round(widthInDips.Value * dpi.DpiScaleX))
+                : bounds.Width;
+
+            double heightPixels = Math.Max(
+                1,
+                Math.Min(
+                    Math.Round(preferredHeight * dpi.DpiScaleY),
+                    area.Height - marginY * 2));
+
+            double availableHeight = Math.Max(
+                0,
+                area.Height - heightPixels - marginY * 2);
+
+            double minTop = area.Top + marginY;
+
+            double top = verticalPosition.HasValue
+                ? minTop + availableHeight *
+                  Math.Clamp(verticalPosition.Value, 0, 1)
+                : Math.Clamp(bounds.Top, minTop, minTop + availableHeight);
+
+            top = Math.Round(top);
+
+            double left = viewModel.IsOnRight
+                ? area.Right - widthPixels - marginX
+                : area.Left + marginX;
+
+            DeskScreenService.SetWindowBounds(
+                this,
+                left,
+                top,
+                widthPixels,
+                heightPixels);
+
+            currentVerticalPosition = availableHeight > 0
+                ? Math.Clamp((top - minTop) / availableHeight, 0, 1)
+                : verticalPosition ?? currentVerticalPosition;
         }
 
         protected override void OnClosed(EventArgs e)
@@ -234,6 +289,12 @@ namespace SideNotes.Views
 
             viewModel.DeskNotes.CollectionChanged -= DeskNotes_CollectionChanged;
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+
+            screenChangeTimer.Stop();
+            screenChangeTimer.Tick -= ScreenChangeTimer_Tick;
+
+            windowSource?.RemoveHook(WindowMessageHook);
+            windowSource = null;
 
             base.OnClosed(e);
         }
@@ -266,7 +327,7 @@ namespace SideNotes.Views
             NoteEditor.IsHitTestVisible = true;
 
             UpdateSideLayout();
-            SetDeskWidth(EditorWidth);
+            AnimateFan(true);
 
             var transform =
                 (TranslateTransform)NoteEditor.RenderTransform;
@@ -296,28 +357,53 @@ namespace SideNotes.Views
         {
             int version = ++editorAnimationVersion;
 
+            // Invalida um fechamento anterior do leque.
+            ++fanAnimationVersion;
+
+            collapseTimer.Stop();
+
             if (NoteEditor.IsKeyboardFocusWithin) Keyboard.ClearFocus();
 
             NoteEditor.IsHitTestVisible = false;
+            NoteTabs.IsHitTestVisible = false;
 
-            var transform =
+            const int duration = 180;
+
+            var editorTransform =
                 (TranslateTransform)NoteEditor.RenderTransform;
 
+            var tabsTransform =
+                (TranslateTransform)NoteTabs.RenderTransform;
+
             Animate(
-                transform,
+                tabsTransform,
+                TranslateTransform.XProperty,
+                viewModel.IsOnRight ? 36 : -36,
+                duration);
+
+            Animate(
+                NoteTabs,
+                UIElement.OpacityProperty,
+                0,
+                duration);
+
+            Animate(
+                editorTransform,
                 TranslateTransform.XProperty,
                 viewModel.IsOnRight ? 24 : -24,
-                180);
+                duration);
 
             Animate(
                 NoteEditor,
                 UIElement.OpacityProperty,
                 0,
-                180,
+                duration,
                 () =>
                 {
                     if (version != editorAnimationVersion ||
                         !viewModel.IsClosing) return;
+
+                    NoteTabs.Visibility = Visibility.Collapsed;
 
                     viewModel.CompleteCloseNote();
                 });
@@ -419,14 +505,39 @@ namespace SideNotes.Views
 
         private void SetDeskWidth(double width)
         {
-            double rightEdge = Left + Width;
-
-            Width = width;
-
-            if (viewModel.IsOnRight)
+            if (windowSource is null)
             {
-                Left = rightEdge - width;
+                Width = width;
+                return;
             }
+
+            if (isDragging || currentScreen is null)
+            {
+                Rect bounds = DeskScreenService.GetWindowBounds(this);
+
+                var dpi = VisualTreeHelper.GetDpi(this);
+
+                double widthPixels = Math.Max(
+                    1,
+                    Math.Round(width * dpi.DpiScaleX));
+
+                double left = viewModel.IsOnRight
+                    ? bounds.Right - widthPixels
+                    : bounds.Left;
+
+                DeskScreenService.SetWindowBounds(
+                    this,
+                    left,
+                    bounds.Top,
+                    widthPixels,
+                    bounds.Height);
+            }
+            else
+            {
+                SnapToEdge(currentVerticalPosition, width);
+            }
+
+            UpdateLayout();
         }
 
         private void NoteContainer_Loaded(object sender, RoutedEventArgs e)
@@ -462,23 +573,30 @@ namespace SideNotes.Views
 
         private void SaveDeskPosition()
         {
-            Rect workArea = SystemParameters.WorkArea;
+            if (currentScreen is null) return;
 
-            double availableHeight = Math.Max(0, workArea.Height - Height - ScreenMargin * 2);
+            Rect area = currentScreen.WorkArea;
+            Rect bounds = DeskScreenService.GetWindowBounds(this);
+
+            var dpi = VisualTreeHelper.GetDpi(this);
+
+            double marginY = ScreenMargin * dpi.DpiScaleY;
+
+            double availableHeight = Math.Max(
+                0,
+                area.Height - bounds.Height - marginY * 2);
 
             double verticalPosition = availableHeight > 0
-                ? (Top - workArea.Top - ScreenMargin) / availableHeight
+                ? (bounds.Top - area.Top - marginY) / availableHeight
                 : 0.5;
 
-            var position = new DeskPosition
+            positionStore.Save(new DeskPosition
             {
+                MonitorDeviceName = currentScreen.DeviceName,
                 IsOnRight = viewModel.IsOnRight,
                 VerticalPosition = Math.Clamp(verticalPosition, 0, 1)
-            };
-
-            positionStore.Save(position);
+            });
         }
-
 
         private void Pill_MouseRightButtonDown(
             object sender,
@@ -496,9 +614,11 @@ namespace SideNotes.Views
             HideEditorImmediately();
             CollapseImmediately();
 
-            dragStartMouse = PointToScreen(e.GetPosition(this));
+            dragStartMouse = DeskScreenService.GetMousePosition();
 
-            dragStartWindow = new Point(Left, Top);
+            Rect bounds = DeskScreenService.GetWindowBounds(this);
+
+            dragStartWindow = bounds.TopLeft;
 
             if (!PillHandle.CaptureMouse())
             {
@@ -518,19 +638,14 @@ namespace SideNotes.Views
                 return;
             }
 
-            Point currentMouse = PointToScreen(e.GetPosition(this));
+            Point currentMouse = DeskScreenService.GetMousePosition();
 
             Vector movement = currentMouse - dragStartMouse;
 
-            var source = PresentationSource.FromVisual(this);
-
-            if (source?.CompositionTarget is { } target)
-            {
-                movement = target.TransformFromDevice.Transform(movement);
-            }
-
-            Left = dragStartWindow.X + movement.X;
-            Top = dragStartWindow.Y + movement.Y;
+            DeskScreenService.MoveWindow(
+                this,
+                dragStartWindow.X + movement.X,
+                dragStartWindow.Y + movement.Y);
 
             e.Handled = true;
         }
@@ -556,12 +671,15 @@ namespace SideNotes.Views
 
             if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
 
-            Rect workArea = SystemParameters.WorkArea;
+            Point mouse = DeskScreenService.GetMousePosition();
 
-            double windowCenter = Left + Width / 2;
-            double screenCenter = workArea.Left + workArea.Width / 2;
+            currentScreen = DeskScreenService.FromPoint(mouse);
 
-            viewModel.SetSide(windowCenter >= screenCenter);
+            Rect area = currentScreen.WorkArea;
+
+            double screenCenter = area.Left + area.Width / 2;
+
+            viewModel.SetSide(mouse.X >= screenCenter);
 
             UpdateSideLayout();
             SnapToEdge();
@@ -598,7 +716,9 @@ namespace SideNotes.Views
                     break;
 
                 case nameof(DeskViewModel.IsExpanded):
-                    if (isDragging)
+                    if (isDragging ||
+                        (!viewModel.IsExpanded &&
+                         NoteTabs.Visibility == Visibility.Collapsed))
                     {
                         CollapseImmediately();
                     }
@@ -613,6 +733,63 @@ namespace SideNotes.Views
                     SnapToEdge();
                     break;
             }
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            windowSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+
+            windowSource?.AddHook(WindowMessageHook);
+        }
+
+        private IntPtr WindowMessageHook(
+            IntPtr hwnd,
+            int message,
+            IntPtr wParam,
+            IntPtr lParam,
+            ref bool handled)
+        {
+            bool displayChanged = message == WmDisplayChange;
+
+            bool workAreaChanged =
+                message == WmSettingChange &&
+                wParam.ToInt64() == SpiSetWorkArea;
+
+            if (displayChanged || workAreaChanged)
+            {
+                screenChangeTimer.Stop();
+                screenChangeTimer.Start();
+            }
+
+            return IntPtr.Zero;
+        }
+
+        private void ScreenChangeTimer_Tick(object? sender, EventArgs e)
+        {
+            screenChangeTimer.Stop();
+
+            if (currentScreen is null) return;
+
+            double verticalPosition = currentVerticalPosition;
+
+            DeskScreen nextScreen = DeskScreenService.FindOrPrimary(currentScreen.DeviceName);
+
+            isDragging = false;
+
+            if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
+
+            collapseTimer.Stop();
+            currentScreen = nextScreen;
+
+            viewModel.CloseNote(immediate: true);
+
+            HideEditorImmediately();
+            CollapseImmediately();
+
+            UpdateSideLayout();
+            SnapToEdge(verticalPosition);
         }
     }
 }

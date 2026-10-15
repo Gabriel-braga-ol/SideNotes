@@ -21,7 +21,6 @@ namespace SideNotes.ViewModels
 
         public ICollectionView DeskNotes { get; }
 
-        // O estado só pode mudar pelos métodos abaixo.
         public Note? OpenedNote => openedNote;
         public bool IsExpanded => isExpanded;
         public bool IsClosing => isClosing;
@@ -35,8 +34,7 @@ namespace SideNotes.ViewModels
 
             DeskNotes = new ListCollectionView(Notes)
             {
-                Filter = item =>
-                    item is Note note && note.IsPinnedToDesk
+                Filter = item => item is Note note && note.IsPinnedToDesk
             };
 
             repository.NoteChanged += OnNoteChanged;
