@@ -42,9 +42,11 @@ namespace SideNotes.Views
 
         private int editorAnimationVersion;
 
-        private Point dragStartMouse;
+        private Point dragAnchor;
 
-        private Point dragStartWindow;
+        private double requestedDeskWidth = CollapsedWidth;
+
+        private int dpiUpdateVersion;
 
         private DeskScreen? currentScreen;
 
@@ -82,6 +84,12 @@ namespace SideNotes.Views
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("Desk: janela carregada.");
+
+            var dpi = VisualTreeHelper.GetDpi(this);
+
+            System.Diagnostics.Debug.WriteLine($"Desk: escala inicial = {dpi.DpiScaleX * 100:0}%");
+
             DeskPosition position = positionStore.Load();
 
             currentScreen = DeskScreenService.FindOrPrimary(position.MonitorDeviceName);
@@ -240,9 +248,11 @@ namespace SideNotes.Views
             double marginX = Math.Round(ScreenMargin * dpi.DpiScaleX);
             double marginY = Math.Round(ScreenMargin * dpi.DpiScaleY);
 
-            double widthPixels = widthInDips.HasValue
-                ? Math.Max(1, Math.Round(widthInDips.Value * dpi.DpiScaleX))
-                : bounds.Width;
+            double logicalWidth = widthInDips ?? requestedDeskWidth;
+
+            double widthPixels = Math.Max(
+                1,
+                Math.Round(logicalWidth * dpi.DpiScaleX));
 
             double heightPixels = Math.Max(
                 1,
@@ -281,6 +291,7 @@ namespace SideNotes.Views
 
         protected override void OnClosed(EventArgs e)
         {
+            ++dpiUpdateVersion;
             ++fanAnimationVersion;
             ++editorAnimationVersion;
 
@@ -505,6 +516,8 @@ namespace SideNotes.Views
 
         private void SetDeskWidth(double width)
         {
+            requestedDeskWidth = width;
+
             if (windowSource is null)
             {
                 Width = width;
@@ -598,6 +611,17 @@ namespace SideNotes.Views
             });
         }
 
+        private void MoveDeskWithMouse()
+        {
+            Point mouse = DeskScreenService.GetMousePosition();
+            Rect bounds = DeskScreenService.GetWindowBounds(this);
+
+            double left = mouse.X - bounds.Width * dragAnchor.X;
+            double top = mouse.Y - bounds.Height * dragAnchor.Y;
+
+            DeskScreenService.MoveWindow(this, left, top);
+        }
+
         private void Pill_MouseRightButtonDown(
             object sender,
             MouseButtonEventArgs e)
@@ -614,11 +638,19 @@ namespace SideNotes.Views
             HideEditorImmediately();
             CollapseImmediately();
 
-            dragStartMouse = DeskScreenService.GetMousePosition();
+            Point mouse = DeskScreenService.GetMousePosition();
 
             Rect bounds = DeskScreenService.GetWindowBounds(this);
 
-            dragStartWindow = bounds.TopLeft;
+            dragAnchor = new Point(
+                Math.Clamp(
+                    (mouse.X - bounds.Left) / Math.Max(1, bounds.Width),
+                    0,
+                    1),
+                Math.Clamp(
+                    (mouse.Y - bounds.Top) / Math.Max(1, bounds.Height),
+                    0,
+                    1));
 
             if (!PillHandle.CaptureMouse())
             {
@@ -626,9 +658,7 @@ namespace SideNotes.Views
             }
         }
 
-        private void Pill_MouseMove(
-            object sender,
-            MouseEventArgs e)
+        private void Pill_MouseMove(object sender, MouseEventArgs e)
         {
             if (!isDragging) return;
 
@@ -638,14 +668,7 @@ namespace SideNotes.Views
                 return;
             }
 
-            Point currentMouse = DeskScreenService.GetMousePosition();
-
-            Vector movement = currentMouse - dragStartMouse;
-
-            DeskScreenService.MoveWindow(
-                this,
-                dragStartWindow.X + movement.X,
-                dragStartWindow.Y + movement.Y);
+            MoveDeskWithMouse();
 
             e.Handled = true;
         }
@@ -790,6 +813,37 @@ namespace SideNotes.Views
 
             UpdateSideLayout();
             SnapToEdge(verticalPosition);
+        }
+
+        protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+        {
+            base.OnDpiChanged(oldDpi, newDpi);
+
+            System.Diagnostics.Debug.WriteLine(
+                $"Desk DPI: " +
+                $"{oldDpi.DpiScaleX * 100:0}% → " +
+                $"{newDpi.DpiScaleX * 100:0}%");
+
+            int version = ++dpiUpdateVersion;
+
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+                {
+                    if (version != dpiUpdateVersion || !IsLoaded || windowSource is null || currentScreen is null) return;
+
+                    if (isDragging)
+                    {
+                        MoveDeskWithMouse();
+                        return;
+                    }
+
+                    currentScreen = DeskScreenService.FindOrPrimary(
+                        currentScreen.DeviceName);
+
+                    SnapToEdge(
+                        currentVerticalPosition,
+                        requestedDeskWidth);
+                }));
         }
     }
 }
