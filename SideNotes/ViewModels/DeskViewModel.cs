@@ -14,7 +14,6 @@ namespace SideNotes.ViewModels
 
         private Note? openedNote;
         private bool isExpanded;
-        private bool isClosing;
         private bool isOnRight = true;
 
         public ObservableCollection<Note> Notes => repository.Notes;
@@ -23,7 +22,6 @@ namespace SideNotes.ViewModels
 
         public Note? OpenedNote => openedNote;
         public bool IsExpanded => isExpanded;
-        public bool IsClosing => isClosing;
         public bool IsOnRight => isOnRight;
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -45,36 +43,17 @@ namespace SideNotes.ViewModels
         {
             if (!Notes.Contains(note) || !note.IsPinnedToDesk) return;
 
-            UpdateState(note, expanded: true, closing: false);
+            UpdateState(note, expanded: true);
         }
 
         public void SetExpanded(bool expanded)
         {
-            // O leque continua expandido ao abrir a nota
-            if (openedNote is not null) return;
-
-            UpdateState(
-                null,
-                expanded && !DeskNotes.IsEmpty,
-                closing: false);
+            UpdateState(openedNote, expanded && !DeskNotes.IsEmpty);        
         }
 
         public void CloseNote(bool immediate = false)
         {
-            if (openedNote is null || immediate)
-            {
-                UpdateState(null, expanded: false, closing: false);
-                return;
-            }
-
-            UpdateState(openedNote, expanded: true, closing: true);
-        }
-
-        public void CompleteCloseNote()
-        {
-            if (!isClosing) return;
-
-            UpdateState(null, expanded: false, closing: false);
+            UpdateState(null, isExpanded);
         }
 
         public void SetSide(bool onRight)
@@ -85,23 +64,16 @@ namespace SideNotes.ViewModels
             Notify(nameof(IsOnRight));
         }
 
-        private void UpdateState(
-            Note? note,
-            bool expanded,
-            bool closing)
+        private void UpdateState(Note? note, bool expanded)
         {
             bool noteChanged = !ReferenceEquals(openedNote, note);
             bool expandedChanged = isExpanded != expanded;
-            bool closingChanged = isClosing != closing;
 
-            // Atualiza tudo antes de notificar a interface.
+            // Atualiza os dois estados de notificar a interface.
             openedNote = note;
             isExpanded = expanded;
-            isClosing = closing;
 
             if (noteChanged) Notify(nameof(OpenedNote));
-
-            if (closingChanged) Notify(nameof(IsClosing));
 
             if (expandedChanged) Notify(nameof(IsExpanded));
         }

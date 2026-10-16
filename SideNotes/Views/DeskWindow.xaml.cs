@@ -20,8 +20,6 @@ namespace SideNotes.Views
 
         private const double ExpandedWidth = 256;
 
-        private const double EditorWidth = 576;
-
         private const double ScreenMargin = 8;
 
         private double currentVerticalPosition = 0.5;
@@ -40,7 +38,7 @@ namespace SideNotes.Views
 
         private int fanAnimationVersion;
 
-        private int editorAnimationVersion;
+        private NoteEditorWindow? editorWindow;
 
         private Point dragAnchor;
 
@@ -135,10 +133,7 @@ namespace SideNotes.Views
                 PillHandle.Opacity = 0;
                 PillHandle.IsHitTestVisible = false;
 
-                SetDeskWidth(
-                    viewModel.OpenedNote is not null
-                        ? EditorWidth
-                        : ExpandedWidth);
+                SetDeskWidth(ExpandedWidth);
             }
 
             int version = ++fanAnimationVersion;
@@ -225,15 +220,9 @@ namespace SideNotes.Views
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
 
-            NoteEditor.HorizontalAlignment = viewModel.IsOnRight
-                ? HorizontalAlignment.Left
-                : HorizontalAlignment.Right;
+            NoteTabs.Margin = new Thickness(0); 
 
-            NoteTabs.Margin = new Thickness(0);
-
-            NoteEditor.Margin = viewModel.IsOnRight
-                ? new Thickness(0, 8, ExpandedWidth, 8)
-                : new Thickness(ExpandedWidth, 8, 0, 8);
+            PositionNoteCards();
         }
 
         private void SnapToEdge(double? verticalPosition = null, double? widthInDips = null)
@@ -293,13 +282,15 @@ namespace SideNotes.Views
         {
             ++dpiUpdateVersion;
             ++fanAnimationVersion;
-            ++editorAnimationVersion;
 
             collapseTimer.Stop();
             collapseTimer.Tick -= CollapseTimer_Tick;
 
             viewModel.DeskNotes.CollectionChanged -= DeskNotes_CollectionChanged;
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+
+            CloseEditorWindow();
+            viewModel.CloseNote();
 
             screenChangeTimer.Stop();
             screenChangeTimer.Tick -= ScreenChangeTimer_Tick;
@@ -320,123 +311,11 @@ namespace SideNotes.Views
             e.Handled = true;
             collapseTimer.Stop();
 
+            bool alreadyOpened = ReferenceEquals(viewModel.OpenedNote, note);
+
             viewModel.OpenNote(note);
-        }
 
-        private void CloseNote_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.CloseNote();
-        }
-
-        private void ShowEditor()
-        {
-            ++editorAnimationVersion;
-
-            bool wasVisible =
-                NoteEditor.Visibility == Visibility.Visible;
-
-            NoteEditor.IsHitTestVisible = true;
-
-            UpdateSideLayout();
-            AnimateFan(true);
-
-            var transform =
-                (TranslateTransform)NoteEditor.RenderTransform;
-
-            if (!wasVisible)
-            {
-                NoteEditor.Opacity = 0;
-                transform.X = viewModel.IsOnRight ? 24 : -24;
-            }
-
-            NoteEditor.Visibility = Visibility.Visible;
-
-            Animate(
-                transform,
-                TranslateTransform.XProperty,
-                0,
-                280);
-
-            Animate(
-                NoteEditor,
-                UIElement.OpacityProperty,
-                1,
-                180);
-        }
-
-        private void AnimateEditorClose()
-        {
-            int version = ++editorAnimationVersion;
-
-            // Invalida um fechamento anterior do leque.
-            ++fanAnimationVersion;
-
-            collapseTimer.Stop();
-
-            if (NoteEditor.IsKeyboardFocusWithin) Keyboard.ClearFocus();
-
-            NoteEditor.IsHitTestVisible = false;
-            NoteTabs.IsHitTestVisible = false;
-
-            const int duration = 180;
-
-            var editorTransform =
-                (TranslateTransform)NoteEditor.RenderTransform;
-
-            var tabsTransform =
-                (TranslateTransform)NoteTabs.RenderTransform;
-
-            Animate(
-                tabsTransform,
-                TranslateTransform.XProperty,
-                viewModel.IsOnRight ? 36 : -36,
-                duration);
-
-            Animate(
-                NoteTabs,
-                UIElement.OpacityProperty,
-                0,
-                duration);
-
-            Animate(
-                editorTransform,
-                TranslateTransform.XProperty,
-                viewModel.IsOnRight ? 24 : -24,
-                duration);
-
-            Animate(
-                NoteEditor,
-                UIElement.OpacityProperty,
-                0,
-                duration,
-                () =>
-                {
-                    if (version != editorAnimationVersion ||
-                        !viewModel.IsClosing) return;
-
-                    NoteTabs.Visibility = Visibility.Collapsed;
-
-                    viewModel.CompleteCloseNote();
-                });
-        }
-
-        private void HideEditorImmediately()
-        {
-            ++editorAnimationVersion;
-
-            if (NoteEditor.IsKeyboardFocusWithin) Keyboard.ClearFocus();
-
-            NoteEditor.IsHitTestVisible = false;
-            NoteEditor.Visibility = Visibility.Collapsed;
-
-            NoteEditor.BeginAnimation(
-                UIElement.OpacityProperty, null);
-
-            var transform =
-                (TranslateTransform)NoteEditor.RenderTransform;
-
-            transform.BeginAnimation(
-                TranslateTransform.XProperty, null);
+            if (alreadyOpened) ShowEditor();
         }
 
         private void CollapseImmediately()
@@ -553,6 +432,46 @@ namespace SideNotes.Views
             UpdateLayout();
         }
 
+        private void ShowEditor()
+        {
+            if (viewModel.OpenedNote is null || currentScreen is null) return;
+
+            if (editorWindow is null)
+            {
+                editorWindow = new NoteEditorWindow(viewModel, currentScreen);
+                editorWindow.Closed += EditorWindow_Closed;
+                editorWindow.Show();
+            }
+
+            if (editorWindow.WindowState == WindowState.Minimized)
+            {
+                editorWindow.WindowState = WindowState.Normal;
+            }
+
+            editorWindow.Activate();
+        }
+
+        private void CloseEditorWindow()
+        {
+            if (editorWindow is null) return;
+
+            NoteEditorWindow window = editorWindow;
+            editorWindow = null;
+
+            window.Closed -= EditorWindow_Closed;
+            window.Close();
+        }
+
+        private void EditorWindow_Closed(object? sender, EventArgs e)
+        {
+            if (!ReferenceEquals(sender, editorWindow)) return;
+
+            editorWindow!.Closed -= EditorWindow_Closed;
+            editorWindow = null;
+
+            viewModel.CloseNote();
+        }
+
         private void NoteContainer_Loaded(object sender, RoutedEventArgs e)
         {
             PositionNoteCards();
@@ -560,9 +479,11 @@ namespace SideNotes.Views
 
         private void PositionNoteCards()
         {
-            const double spacing = 54;
+            const double spacing = 58;
             const double cardHeight = 160;
             const double padding = 12;
+            const double maxAngle = 2;
+            const double maxOffset = 4;
 
             int count = NoteTabs.Items.Count;
 
@@ -571,15 +492,32 @@ namespace SideNotes.Views
                 + cardHeight
                 + padding * 2;
 
+            double direction = viewModel.IsOnRight ? -1 : 1;
+
             for (int i = 0; i < count; i++)
             {
                 var container =
                     NoteTabs.ItemContainerGenerator
                         .ContainerFromIndex(i) as ContentPresenter;
 
-                if (container is null) continue;
+                if (container is null)
+                    continue;
 
-                Canvas.SetLeft(container, 4);
+                double progress = count <= 1
+                    ? 0.5
+                    : (double)i / (count - 1);
+
+                double angle = count <= 1
+                    ? 0
+                    : (progress * 2 - 1) * maxAngle;
+
+                double offset = count <= 1
+                    ? 0
+                    : progress * maxOffset; 
+
+                container.Tag = angle * direction;
+
+                Canvas.SetLeft(container, 4 + offset * direction);
                 Canvas.SetTop(container, padding + i * spacing);
             }
         }
@@ -633,9 +571,7 @@ namespace SideNotes.Views
             collapseTimer.Stop();
             isDragging = true;
 
-            viewModel.CloseNote(immediate: true);
-
-            HideEditorImmediately();
+            viewModel.SetExpanded(false);
             CollapseImmediately();
 
             Point mouse = DeskScreenService.GetMousePosition();
@@ -716,32 +652,14 @@ namespace SideNotes.Views
             switch (e.PropertyName)
             {
                 case nameof(DeskViewModel.OpenedNote):
-                    if (viewModel.OpenedNote is null)
-                    {
-                        HideEditorImmediately();
-                    }
-                    else
-                    {
-                        ShowEditor();
-                    }
-                    break;
+                    if (viewModel.OpenedNote is null)CloseEditorWindow();
 
-                case nameof(DeskViewModel.IsClosing):
-                    if (viewModel.IsClosing)
-                    {
-                        AnimateEditorClose();
-                    }
-                    else if (viewModel.OpenedNote is not null)
-                    {
-                        // Restaura o editor se o fechamento foi cancelado.
-                        ShowEditor();
-                    }
+                    else ShowEditor();
+
                     break;
 
                 case nameof(DeskViewModel.IsExpanded):
-                    if (isDragging ||
-                        (!viewModel.IsExpanded &&
-                         NoteTabs.Visibility == Visibility.Collapsed))
+                    if (isDragging || (!viewModel.IsExpanded && NoteTabs.Visibility == Visibility.Collapsed))
                     {
                         CollapseImmediately();
                     }
@@ -749,6 +667,7 @@ namespace SideNotes.Views
                     {
                         AnimateFan(viewModel.IsExpanded);
                     }
+
                     break;
 
                 case nameof(DeskViewModel.IsOnRight):
@@ -806,9 +725,8 @@ namespace SideNotes.Views
             collapseTimer.Stop();
             currentScreen = nextScreen;
 
-            viewModel.CloseNote(immediate: true);
-
-            HideEditorImmediately();
+            viewModel.CloseNote();
+            viewModel.SetExpanded(false);
             CollapseImmediately();
 
             UpdateSideLayout();
