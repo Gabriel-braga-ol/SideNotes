@@ -25,11 +25,23 @@ namespace SideNotes.Services
 
         private bool hasUnsavedChanges;
 
+        private bool failureReported;
+
+        private int consecutiveFailures;
+
+        private TimeSpan retryDelay = AutoSaveDelay;
+
         private readonly HashSet<Note> trackedNotes = new();
+
+        private static readonly TimeSpan AutoSaveDelay =
+            TimeSpan.FromSeconds(1);
+
+        private static readonly TimeSpan MaxRetryDelay =
+            TimeSpan.FromSeconds(30);
 
         private readonly DispatcherTimer autoSaveTimer = new()
         {
-            Interval = TimeSpan.FromSeconds(1)
+            Interval = AutoSaveDelay
         };
 
         private readonly string[] noteColors =
@@ -119,6 +131,7 @@ namespace SideNotes.Services
             hasUnsavedChanges = true;
 
             autoSaveTimer.Stop();
+            autoSaveTimer.Interval = retryDelay;
             autoSaveTimer.Start();
         }
 
@@ -137,6 +150,8 @@ namespace SideNotes.Services
             NoteStorage.Save(Notes.ToList());
 
             hasUnsavedChanges = false;
+
+            ResetRetryState();
         }
 
         public bool TrySaveNotes(out string? errorMessage)
@@ -155,8 +170,8 @@ namespace SideNotes.Services
                 errorMessage =
                     "Não foi possível salvar as notas no arquivo.\n\n" +
                     "Suas alterações continuam na memória. " +
-                    "Mantenha o aplicativo aberto e pressione Ctrl + S " +
-                    "para tentar salvar novamente.";
+                    "O aplicativo tentará salvar novamente em instantes; " +
+                    "pressione Ctrl + S para tentar agora.";
 
                 return false;
             }
@@ -166,11 +181,46 @@ namespace SideNotes.Services
         {
             if (!hasUnsavedChanges) return;
 
-            if (!TrySaveNotes(out string? errorMessage))
+            if (TrySaveNotes(out string? errorMessage))
             {
-                SaveFailed?.Invoke(
-                    errorMessage ?? "Não foi possível salvar as notas.");
+                return;
             }
+
+            ScheduleRetry();
+
+            if (failureReported) return;
+
+            failureReported = true;
+
+            SaveFailed?.Invoke(
+                errorMessage ?? "Não foi possível salvar as notas.");
+        }
+
+        private void ScheduleRetry()
+        {
+            consecutiveFailures++;
+
+            // O atraso cresce até o limite para não repetir avisos e gravações a cada segundo.
+            int exponent = Math.Min(consecutiveFailures - 1, 5);
+
+            double delaySeconds = Math.Min(
+                AutoSaveDelay.TotalSeconds * Math.Pow(2, exponent),
+                MaxRetryDelay.TotalSeconds);
+
+            retryDelay = TimeSpan.FromSeconds(delaySeconds);
+
+            autoSaveTimer.Stop();
+            autoSaveTimer.Interval = retryDelay;
+            autoSaveTimer.Start();
+        }
+
+        private void ResetRetryState()
+        {
+            consecutiveFailures = 0;
+            failureReported = false;
+            retryDelay = AutoSaveDelay;
+
+            autoSaveTimer.Interval = AutoSaveDelay;
         }
 
         public void StopAutoSave()

@@ -12,11 +12,11 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Cores atribuídas automaticamente a partir de uma paleta.
 - Lista com título, prévia do conteúdo e destaque da nota selecionada.
 - Busca por título ou conteúdo, sem diferenciar maiúsculas e minúsculas.
-- Salvamento automático após um segundo sem digitar.
+- Salvamento automático após um segundo sem digitar, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
 - Persistência local em JSON.
 - Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
-- Avisos de falha de gravação e confirmação antes de fechar quando não é possível salvar.
+- Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
 - Registro de falhas inesperadas em `%LocalAppData%\SideNotes\logs\app.log`, sem registrar o conteúdo das notas.
 - Execução em instância única: uma segunda abertura apenas informa que o aplicativo já está em execução.
 - Fixação de até cinco notas no Desk, compartilhadas com o modo Janela.
