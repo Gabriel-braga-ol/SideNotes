@@ -13,7 +13,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Lista com título, prévia do conteúdo e destaque da nota selecionada.
 - Busca por título ou conteúdo, sem diferenciar maiúsculas e minúsculas.
 - Salvamento automático após um segundo sem digitar, em segundo plano: apenas o snapshot mais recente é enfileirado, sem bloquear a interface, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
-- Persistência local em JSON.
+- Persistência local em JSON com formato versionado, identificador estável e datas de criação e atualização por nota.
 - Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
 - Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
@@ -105,6 +105,27 @@ As notas são armazenadas neste caminho do usuário do Windows:
 %LocalAppData%\DearNotes\notes.json
 ```
 
+O arquivo usa um documento versionado. A versão atual é a **1**:
+
+```json
+{
+  "SchemaVersion": 1,
+  "Notes": [
+    {
+      "Id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+      "Title": "Compras",
+      "Content": "Leite",
+      "Color": "#B8E6D0",
+      "IsPinnedToDesk": false,
+      "CreatedAt": "2026-11-16T12:34:56+00:00",
+      "UpdatedAt": "2026-11-16T12:40:00+00:00"
+    }
+  ]
+}
+```
+
+Arquivos antigos que contêm apenas a lista de notas (sem `SchemaVersion`) são migrados automaticamente na leitura: o aplicativo gera um identificador para cada nota e usa a data atual como criação e atualização. A conversão é gravada no próximo salvamento. Versões de formato mais novas que a suportada são tratadas como dados inválidos, com cópia de segurança preservada.
+
 Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substitui o arquivo principal. O autosave grava em segundo plano uma cópia das notas e, ao fechar a janela principal, aguarda a fila terminar antes de encerrar. Ao detectar JSON ou dados inválidos, preserva uma cópia chamada `notes-invalid-<identificador>.json` e informa sua localização.
 
 A indicação de quais notas estão fixadas no Desk também é salva em `notes.json`. O identificador do monitor, o lado e a posição vertical da pílula ficam em um arquivo separado:
@@ -132,7 +153,9 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | Arquivo | Responsabilidade |
 | --- | --- |
 | `DearNotes/App.xaml` e `DearNotes/App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
-| `DearNotes.Core/Models/Note.cs` | Dados da nota, incluindo fixação no Desk, e notificações de alteração. |
+| `DearNotes.Core/Models/Note.cs` | Dados da nota, incluindo identificador, datas, fixação no Desk, e notificações de alteração. |
+| `DearNotes.Core/Models/NotesDocument.cs` | Documento versionado que envolve a lista de notas em `notes.json`. |
+| `DearNotes.Core/Models/NoteDocument.cs` | Representação persistida de uma nota, com identificador, conteúdo, cor, fixação e datas. |
 | `DearNotes.Core/Models/DeskPosition.cs` | Identificador do monitor, lado e posição vertical do Desk. |
 | `DearNotes/ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |
 | `DearNotes/ViewModels/DeskViewModel.cs` | Visão das notas fixadas, estado do Desk e transições de abertura, fechamento, expansão e mudança de lado. |
@@ -142,7 +165,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
 | `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, centralização do editor e posição do arraste. |
 | `DearNotes.Core/Services/NotesAutoSaver.cs` | Fila de gravação em segundo plano: mantém uma escrita por vez e substitui o snapshot pendente pelo mais recente. |
-| `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação e gravação do arquivo JSON das notas. |
+| `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação, migração do formato antigo e gravação do arquivo JSON das notas. |
 | `DearNotes.Core/Services/IDeskPositionStore.cs` e `DeskPositionStore.cs` | Contrato e implementação da leitura, validação e gravação de `desk_position.json`. |
 | `DearNotes.Core/Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
 | `DearNotes/Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
@@ -152,6 +175,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, editor e arraste. |
 | `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, limites e preservação de arquivos inválidos. |
 | `DearNotes.Tests/NotesAutoSaverTests.cs` | Gravação em segundo plano, coalescência de snapshots, falhas e gravação síncrona de emergência. |
+| `DearNotes.Tests/NoteTests.cs` | Identidade, datas e independência das cópias usadas pelo autosave. |
 | `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
 
@@ -171,6 +195,7 @@ Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos 
 - [x] Adaptar o Desk a monitores com escalas de DPI diferentes.
 - [x] Salvar as preferências do Desk, incluindo monitor, posição e notas escolhidas.
 - [x] Gravar as notas em segundo plano sem bloquear a interface.
+- [x] Versionar o formato de `notes.json` e migrar automaticamente o formato antigo.
 - [ ] Refinar o visual do leque do Desk.
 - [ ] Suavizar as animações de abertura e recolhimento.
 

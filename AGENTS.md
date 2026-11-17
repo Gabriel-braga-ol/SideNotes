@@ -51,7 +51,9 @@ DearNotes/
     AppLogger.cs            # Registro de falhas inesperadas em arquivo
 DearNotes.Core/
   Models/
-    Note.cs                 # Dados da nota + INotifyPropertyChanged
+    Note.cs                 # Dados da nota + INotifyPropertyChanged + metadados
+    NoteDocument.cs         # Representação persistida de uma nota
+    NotesDocument.cs        # Documento versionado de notes.json
     DeskPosition.cs         # Monitor, lado e posição vertical do Desk
   Services/
     AppPaths.cs             # Caminhos de armazenamento e de log
@@ -67,11 +69,12 @@ DearNotes.Tests/
   NoteStorageTests.cs       # Testes de notes.json
   DeskPositionStoreTests.cs # Testes de desk_position.json
   NotesAutoSaverTests.cs    # Testes da fila de autosave
+  NoteTests.cs              # Identidade, metadados e cópia para o autosave
 ```
 
 Dados persistidos (nunca versione esses arquivos nem os trate como código):
 
-- `%LocalAppData%\DearNotes\notes.json` — notas e estado de fixação no Desk.
+- `%LocalAppData%\DearNotes\notes.json` — documento versionado com as notas, identificadores, datas e estado de fixação no Desk.
 - `%LocalAppData%\DearNotes\desk_position.json` — monitor, lado e posição do Desk.
 - `%LocalAppData%\DearNotes\notes-invalid-<id>.json` — cópia preservada quando o arquivo principal é inválido.
 - `%LocalAppData%\SideNotes\...` — instalação anterior; origem da migração automática, mantida como cópia de segurança.
@@ -94,7 +97,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segund
 - **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\DearNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
 - **Instância única:** o aplicativo usa um `Mutex` nomeado. Não contorne essa proteção nem abra duas instâncias sobre o mesmo armazenamento.
 - **Evolução:** novas dependências externas exigem justificativa no README; hoje a única dependência externa é o xUnit, restrito ao projeto de testes. Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
-- **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README. Mudanças de nome ou de pasta de armazenamento exigem migração automática e preservação dos arquivos antigos.
+- **Compatibilidade de dados:** `notes.json` usa `SchemaVersion` (atualmente **1**) e um documento com a lista de notas. Mudanças de formato exigem incremento da versão, migração dos dados existentes, testes com o formato anterior e atualização do README. O formato legado — uma lista simples de notas — continua sendo lido e migrado automaticamente. Mudanças de nome ou de pasta de armazenamento exigem migração automática e preservação dos arquivos antigos.
 - **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views`, `DearNotes.Services`) e atualize o README e este arquivo.
 
 ## Convenções de código

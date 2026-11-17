@@ -241,13 +241,7 @@ namespace DearNotes.Services
 
             foreach (Note note in Notes)
             {
-                snapshot.Add(new Note
-                {
-                    Title = note.Title,
-                    Content = note.Content,
-                    Color = note.Color,
-                    IsPinnedToDesk = note.IsPinnedToDesk
-                });
+                snapshot.Add(note.CreateSnapshot());
             }
 
             return snapshot;
