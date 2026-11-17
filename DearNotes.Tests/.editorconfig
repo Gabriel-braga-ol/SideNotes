@@ -1,0 +1,4 @@
+[*.cs]
+# Nomes de teste seguem a convenção Metodo_Cenario_Resultado e não expõem API pública;
+# CA1707 (sublinhados em identificadores) não se aplica a este projeto.
+dotnet_diagnostic.CA1707.severity = none

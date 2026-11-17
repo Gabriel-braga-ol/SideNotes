@@ -9,7 +9,7 @@ namespace DearNotes.Services
     {
         private const int KeySize = 32;
 
-        private static readonly byte[] Entropy =
+        private static readonly byte[] entropy =
             Encoding.UTF8.GetBytes("DearNotes.NotesKey.v1");
 
         private readonly object syncRoot = new();
@@ -46,7 +46,7 @@ namespace DearNotes.Services
 
             byte[] key = ProtectedData.Unprotect(
                 protectedKey,
-                Entropy,
+                entropy,
                 DataProtectionScope.CurrentUser);
 
             if (key.Length == KeySize) return key;
@@ -71,7 +71,7 @@ namespace DearNotes.Services
             {
                 byte[] protectedKey = ProtectedData.Protect(
                     key,
-                    Entropy,
+                    entropy,
                     DataProtectionScope.CurrentUser);
 
                 string temporaryPath = keyFilePath + ".tmp";

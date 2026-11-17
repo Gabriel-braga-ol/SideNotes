@@ -1,4 +1,9 @@
-﻿using System.Text;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,17 +13,12 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Collections.ObjectModel;
-using System.Linq;
 using DearNotes.Models;
 using DearNotes.ViewModels;
 
 namespace DearNotes.Views
 {
-    
+
     public partial class MainWindow : Window
     {
         private readonly MainViewModel viewModel;
@@ -32,7 +32,7 @@ namespace DearNotes.Views
 
             viewModel.SaveFailed += ViewModel_SaveFailed;
             Closed += MainWindow_Closed;
-            
+
             DataContext = viewModel;
 
             Loaded += MainWindow_Loaded;
@@ -40,13 +40,13 @@ namespace DearNotes.Views
         private void AddNote_Click(object sender, RoutedEventArgs e)
         {
             Note note = viewModel.CreateNote();
-            
+
             NotesList.ScrollIntoView(note);
 
             TitleTextBox.Focus();
-        }     
+        }
 
-        private void  Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
             {
@@ -60,8 +60,8 @@ namespace DearNotes.Views
             {
                 viewModel.DeleteSelectedNote();
             }
-        }              
-        
+        }
+
         private bool isClosing;
 
         private bool closeConfirmed;
@@ -84,7 +84,7 @@ namespace DearNotes.Views
                     this,
                     "Não foi possível salvar as notas. \n\n" +
                     "Deseja fechar mesmo assim? " +
-                    "As alterações não gravadas serão perdidas.", "Falha ao salvar", 
+                    "As alterações não gravadas serão perdidas.", "Falha ao salvar",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning,
                     MessageBoxResult.No);
@@ -115,7 +115,7 @@ namespace DearNotes.Views
             viewModel.StopAutoSave();
             viewModel.SaveFailed -= ViewModel_SaveFailed;
         }
-        
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             if (viewModel.LoadWarningMessage is not null)

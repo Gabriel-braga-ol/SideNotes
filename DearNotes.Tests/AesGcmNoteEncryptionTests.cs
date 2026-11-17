@@ -7,7 +7,7 @@ namespace DearNotes.Tests
 {
     public sealed class AesGcmNoteEncryptionTests
     {
-        private static readonly byte[] TestKey =
+        private static readonly byte[] testKey =
             Enumerable.Repeat((byte)0x31, 32).ToArray();
 
         [Fact]
@@ -124,7 +124,7 @@ namespace DearNotes.Tests
         private static AesGcmNoteEncryption CreateEncryption()
         {
             return new AesGcmNoteEncryption(
-                new FixedKeyProvider(TestKey));
+                new FixedKeyProvider(testKey));
         }
     }
 }

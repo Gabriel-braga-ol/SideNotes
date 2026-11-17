@@ -11,7 +11,7 @@ namespace DearNotes.Tests
 {
     public sealed class NoteStorageTests
     {
-        private static readonly byte[] TestKey =
+        private static readonly byte[] testKey =
             Enumerable.Repeat((byte)0x42, 32).ToArray();
 
         [Fact]
@@ -381,10 +381,10 @@ namespace DearNotes.Tests
                 Directory.GetFiles(directory.Path, "notes-invalid-*.json"));
         }
 
-        private static INoteEncryption CreateEncryption()
+        private static AesGcmNoteEncryption CreateEncryption()
         {
             return new AesGcmNoteEncryption(
-                new FixedKeyProvider(TestKey));
+                new FixedKeyProvider(testKey));
         }
 
         private static NotesDocument DecryptDocument(

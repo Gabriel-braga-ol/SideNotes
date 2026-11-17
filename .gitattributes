@@ -1,0 +1,22 @@
+# Normaliza o armazenamento no índice e preserva CRLF na cópia de trabalho do Windows.
+* text=auto eol=crlf
+
+*.cs text
+*.xaml text
+*.csproj text
+*.props text
+*.slnx text
+*.manifest text
+*.editorconfig text
+
+# Documentação e configuração de ferramentas mantêm LF para leitura em qualquer sistema.
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binários não passam por conversão de fim de linha.
+*.png binary
+*.ico binary
+*.jpg binary
+*.gif binary

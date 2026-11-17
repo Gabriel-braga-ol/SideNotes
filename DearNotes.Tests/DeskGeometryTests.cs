@@ -5,16 +5,16 @@ namespace DearNotes.Tests
 {
     public sealed class DeskGeometryTests
     {
-        private static readonly Rect WorkArea = new(0, 0, 1920, 1080);
+        private static readonly Rect workArea = new(0, 0, 1920, 1080);
 
-        private static readonly DpiScale DefaultDpi = new(1, 1);
+        private static readonly DpiScale defaultDpi = new(1, 1);
 
         [Fact]
         public void ComputeSnapBounds_RightSide_AnchorsToRightMargin()
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
-                WorkArea,
-                DefaultDpi,
+                workArea,
+                defaultDpi,
                 logicalWidth: 24,
                 logicalHeight: 800,
                 isOnRight: true,
@@ -31,8 +31,8 @@ namespace DearNotes.Tests
         public void ComputeSnapBounds_LeftSide_AnchorsToLeftMargin()
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
-                WorkArea,
-                DefaultDpi,
+                workArea,
+                defaultDpi,
                 logicalWidth: 24,
                 logicalHeight: 800,
                 isOnRight: false,
@@ -53,8 +53,8 @@ namespace DearNotes.Tests
             double expectedTop)
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
-                WorkArea,
-                DefaultDpi,
+                workArea,
+                defaultDpi,
                 logicalWidth: 24,
                 logicalHeight: 800,
                 isOnRight: true,
@@ -73,8 +73,8 @@ namespace DearNotes.Tests
             double expectedTop)
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
-                WorkArea,
-                DefaultDpi,
+                workArea,
+                defaultDpi,
                 logicalWidth: 24,
                 logicalHeight: 800,
                 isOnRight: true,
@@ -88,7 +88,7 @@ namespace DearNotes.Tests
         public void ComputeSnapBounds_ScalesWidthAndMarginsForDpi()
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
-                WorkArea,
+                workArea,
                 new DpiScale(1.5, 1.5),
                 logicalWidth: 24,
                 logicalHeight: 600,
@@ -103,11 +103,11 @@ namespace DearNotes.Tests
         }
 
         [Fact]
-        public void ComputeSnapBounds_LimitsHeightToWorkArea()
+        public void ComputeSnapBounds_LimitsHeightToworkArea()
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
-                WorkArea,
-                DefaultDpi,
+                workArea,
+                defaultDpi,
                 logicalWidth: 24,
                 logicalHeight: 5000,
                 isOnRight: true,
@@ -119,7 +119,7 @@ namespace DearNotes.Tests
         }
 
         [Fact]
-        public void ComputeSnapBounds_LimitsWidthToWorkArea()
+        public void ComputeSnapBounds_LimitsWidthToworkArea()
         {
             var workArea = new Rect(0, 0, 100, 300);
 
@@ -139,7 +139,7 @@ namespace DearNotes.Tests
         }
 
         [Fact]
-        public void ComputeSnapBounds_WhenMarginsExceedWorkArea_StaysInside()
+        public void ComputeSnapBounds_WhenMarginsExceedworkArea_StaysInside()
         {
             var workArea = new Rect(0, 0, 20, 60);
 
@@ -171,9 +171,9 @@ namespace DearNotes.Tests
             double expected)
         {
             double normalized = DeskGeometry.ComputeNormalizedTop(
-                WorkArea,
+                workArea,
                 new Rect(0, top, 24, height),
-                DefaultDpi,
+                defaultDpi,
                 fallback: 0.5);
 
             Assert.Equal(expected, normalized, precision: 3);
@@ -183,9 +183,9 @@ namespace DearNotes.Tests
         public void ComputeNormalizedTop_WithoutAvailableSpace_ReturnsFallback()
         {
             double normalized = DeskGeometry.ComputeNormalizedTop(
-                WorkArea,
+                workArea,
                 new Rect(0, 0, 24, 1080),
-                DefaultDpi,
+                defaultDpi,
                 fallback: 0.3);
 
             Assert.Equal(0.3, normalized, precision: 3);
@@ -195,22 +195,22 @@ namespace DearNotes.Tests
         [InlineData(960, true)]
         [InlineData(961, true)]
         [InlineData(959, false)]
-        public void IsOnRightSide_UsesWorkAreaCenter(
+        public void IsOnRightSide_UsesworkAreaCenter(
             double mouseX,
             bool expected)
         {
             Assert.Equal(
                 expected,
-                DeskGeometry.IsOnRightSide(WorkArea, mouseX));
+                DeskGeometry.IsOnRightSide(workArea, mouseX));
         }
 
         [Fact]
         public void ComputeEditorBounds_CentersWindowWithMargin()
         {
             Rect bounds = DeskGeometry.ComputeEditorBounds(
-                WorkArea,
+                workArea,
                 new Size(800, 600),
-                DefaultDpi,
+                defaultDpi,
                 marginInDips: 12);
 
             Assert.Equal(560, bounds.Left);
@@ -220,12 +220,12 @@ namespace DearNotes.Tests
         }
 
         [Fact]
-        public void ComputeEditorBounds_LimitsWindowToWorkArea()
+        public void ComputeEditorBounds_LimitsWindowToworkArea()
         {
             Rect bounds = DeskGeometry.ComputeEditorBounds(
-                WorkArea,
+                workArea,
                 new Size(3000, 2000),
-                DefaultDpi,
+                defaultDpi,
                 marginInDips: 12);
 
             Assert.Equal(12, bounds.Left);

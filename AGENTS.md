@@ -21,6 +21,8 @@ Execute a partir da raiz do repositório (onde está `DearNotes.slnx`):
 | Compilar a solução | `dotnet build .\DearNotes.slnx` |
 | Executar o aplicativo | `dotnet run --project .\DearNotes\DearNotes.csproj` |
 | Executar os testes | `dotnet test .\DearNotes.slnx` |
+| Verificar a formatação | `dotnet format .\DearNotes.slnx --verify-no-changes` |
+| Corrigir a formatação | `dotnet format .\DearNotes.slnx` |
 | Limpar artefatos | `dotnet clean .\DearNotes.slnx` |
 | Restaurar dependências | `dotnet restore .\DearNotes.slnx` |
 
@@ -32,6 +34,11 @@ A solução tem três projetos: `DearNotes` (WPF), `DearNotes.Core` (modelos, pe
 DearNotes.slnx              # Solução (formato .slnx)
 README.md                   # Comportamento, armazenamento e organização do código
 AGENTS.md                   # Este arquivo: regras para pessoas e agentes
+.editorconfig               # Estilo, nomenclatura e severidade dos analisadores
+Directory.Build.props       # Analisadores no nível mais recente e avisos como erro
+.gitattributes              # Normalização de fim de linha (CRLF na cópia de trabalho)
+.github/
+  workflows/ci.yml          # Formatação, build e testes no Windows
 DearNotes/
   App.xaml, App.xaml.cs     # Composition root: criptografia, repositório, VMs e janelas
   app.manifest              # asInvoker + reconhecimento de DPI por monitor (PerMonitorV2)
@@ -122,6 +129,8 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 - Identificadores e código em **inglês**; textos de interface e mensagens ao usuário em **português**.
 - Uma classe por arquivo, nome do arquivo igual ao da classe. Evite `using` não utilizado e código comentado.
 - Evite números mágicos: nomeie constantes ou use configuração quando o valor tiver significado de domínio.
+- **Estilo verificado por ferramenta:** `.editorconfig` define formatação, nomenclatura e severidade; `Directory.Build.props` liga os analisadores e trata avisos como erro. Não desative uma regra nem use `#pragma` para passar o build — corrija o código. Nomes de teste usam `Metodo_Cenario_Resultado` e por isso `CA1707` está desativado apenas em `DearNotes.Tests/.editorconfig`.
+- **Antes de commitar:** rode `dotnet format` e confirme que `dotnet format --verify-no-changes` termina com sucesso. A CI repete a verificação, o build e os testes.
 
 ## Documentação
 

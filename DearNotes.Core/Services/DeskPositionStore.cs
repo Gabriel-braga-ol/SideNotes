@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
@@ -9,7 +9,7 @@ namespace DearNotes.Services
     // Assume o caminho do arquivo, a leitura, a gravação e a validação da posição carregada.
     public sealed class DeskPositionStore : IDeskPositionStore
     {
-        private static readonly JsonSerializerOptions SerializerOptions = new()
+        private static readonly JsonSerializerOptions serializerOptions = new()
         {
             WriteIndented = true
         };
@@ -76,7 +76,7 @@ namespace DearNotes.Services
 
                 string json = JsonSerializer.Serialize(
                     position,
-                    SerializerOptions);
+                    serializerOptions);
 
                 File.WriteAllText(filePath, json);
             }
