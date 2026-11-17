@@ -3,37 +3,24 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 using DearNotes.Models;
 
 namespace DearNotes.Services
 {
-    // responsável pela coleção compartilhada,
-    // pelo autosave e pelas solicitações de salvamento ao NoteStorage
-    // acompanha alterações na coleção e nos objetos Note
+    // Responsável pela coleção compartilhada, pelo atraso do autosave,
+    // pelas novas tentativas e pelo envio de snapshots ao NotesAutoSaver.
     public sealed class NotesRepository : IDisposable
     {
-        public ObservableCollection<Note> Notes { get; }
-
-        public string? LoadWarningMessage { get; }
-
-        public event Action<string>? SaveFailed;
-
-        public event Action<Note, string?>? NoteChanged;
-
-        private bool hasUnsavedChanges;
-
-        private bool failureReported;
-
-        private int consecutiveFailures;
-
-        private TimeSpan retryDelay = AutoSaveDelay;
-
-        private readonly HashSet<Note> trackedNotes = new();
-
-        private readonly INoteStore noteStore;
+        private const string SaveFailureMessage =
+            "Não foi possível salvar as notas no arquivo.\n\n" +
+            "Suas alterações continuam na memória. " +
+            "O aplicativo tentará salvar novamente em instantes; " +
+            "pressione Ctrl + S para tentar agora.";
 
         private static readonly TimeSpan AutoSaveDelay =
             TimeSpan.FromSeconds(1);
@@ -41,12 +28,7 @@ namespace DearNotes.Services
         private static readonly TimeSpan MaxRetryDelay =
             TimeSpan.FromSeconds(30);
 
-        private readonly DispatcherTimer autoSaveTimer = new()
-        {
-            Interval = AutoSaveDelay
-        };
-
-        private readonly string[] noteColors =
+        private static readonly string[] NoteColors =
         {
             "#B8E6D0",
             "#F7D794",
@@ -55,9 +37,40 @@ namespace DearNotes.Services
             "#A8D8EA"
         };
 
+        private readonly NotesAutoSaver autoSaver;
+
+        private readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+
+        private readonly HashSet<Note> trackedNotes = new();
+
+        private readonly DispatcherTimer autoSaveTimer = new()
+        {
+            Interval = AutoSaveDelay
+        };
+
+        private bool hasUnsavedChanges;
+
+        private bool failureReported;
+
+        private bool isFlushing;
+
+        private int consecutiveFailures;
+
+        private TimeSpan retryDelay = AutoSaveDelay;
+
+        public ObservableCollection<Note> Notes { get; }
+
+        public string? LoadWarningMessage { get; }
+
+        public event Action<string>? SaveFailed;
+
+        public event Action<Note, string?>? NoteChanged;
+
         public NotesRepository(INoteStore noteStore)
         {
-            this.noteStore = noteStore;
+            autoSaver = new NotesAutoSaver(noteStore);
+            autoSaver.SaveSucceeded += AutoSaver_SaveSucceeded;
+            autoSaver.SaveFailed += AutoSaver_SaveFailed;
 
             Notes = new ObservableCollection<Note>(
                 noteStore.Load(out string? warningMessage));
@@ -76,7 +89,7 @@ namespace DearNotes.Services
             {
                 Title = $"Nova nota {Notes.Count + 1}",
                 Content = string.Empty,
-                Color = noteColors[Notes.Count % noteColors.Length]
+                Color = NoteColors[Notes.Count % NoteColors.Length]
             };
 
             Notes.Add(note);
@@ -99,17 +112,14 @@ namespace DearNotes.Services
 
         private void UpdateTrackedNotes()
         {
-            // acompanhar notas removidas.
             foreach (Note note in trackedNotes.ToArray())
             {
-                if (!Notes.Contains(note))
-                {
-                    note.PropertyChanged -= OnNotePropertyChanged;
-                    trackedNotes.Remove(note);
-                }
+                if (Notes.Contains(note)) continue;
+
+                note.PropertyChanged -= OnNotePropertyChanged;
+                trackedNotes.Remove(note);
             }
 
-            // acompanha cada nota uma única vez.
             foreach (Note note in Notes)
             {
                 if (trackedNotes.Add(note))
@@ -144,25 +154,34 @@ namespace DearNotes.Services
             EventArgs e)
         {
             autoSaveTimer.Stop();
-            SavePendingChanges();
+            QueuePendingChanges();
         }
 
-        public void SaveNotes()
+        public void SavePendingChanges()
         {
             autoSaveTimer.Stop();
+            QueuePendingChanges();
+        }
 
-            noteStore.Save(Notes.ToList());
+        private void QueuePendingChanges()
+        {
+            if (!hasUnsavedChanges) return;
 
             hasUnsavedChanges = false;
 
-            ResetRetryState();
+            autoSaver.Enqueue(CreateSnapshot());
         }
 
         public bool TrySaveNotes(out string? errorMessage)
         {
+            autoSaveTimer.Stop();
+
             try
             {
-                SaveNotes();
+                autoSaver.SaveNow(CreateSnapshot());
+
+                hasUnsavedChanges = false;
+                ResetRetryState();
 
                 errorMessage = null;
                 return true;
@@ -171,33 +190,117 @@ namespace DearNotes.Services
                 ex is IOException ||
                 ex is UnauthorizedAccessException)
             {
-                errorMessage =
-                    "Não foi possível salvar as notas no arquivo.\n\n" +
-                    "Suas alterações continuam na memória. " +
-                    "O aplicativo tentará salvar novamente em instantes; " +
-                    "pressione Ctrl + S para tentar agora.";
+                Debug.WriteLine(
+                    $"Falha ao salvar as notas: {ex.Message}");
 
+                errorMessage = SaveFailureMessage;
                 return false;
             }
         }
 
-        public void SavePendingChanges()
+        // Aguarda a fila e grava edições que chegaram durante a espera.
+        public async Task<bool> FlushAsync()
         {
-            if (!hasUnsavedChanges) return;
+            isFlushing = true;
 
-            if (TrySaveNotes(out string? errorMessage))
+            try
             {
-                return;
+                while (true)
+                {
+                    autoSaveTimer.Stop();
+                    hasUnsavedChanges = false;
+
+                    bool saved = await autoSaver.FlushAsync(
+                        CreateSnapshot());
+
+                    if (!saved)
+                    {
+                        // A janela pode continuar aberta se o usuário recusar o fechamento.
+                        hasUnsavedChanges = true;
+                        ScheduleRetry();
+
+                        return false;
+                    }
+
+                    if (!hasUnsavedChanges)
+                    {
+                        ResetRetryState();
+                        return true;
+                    }
+                }
+            }
+            finally
+            {
+                isFlushing = false;
+            }
+        }
+
+        private List<Note> CreateSnapshot()
+        {
+            var snapshot = new List<Note>(Notes.Count);
+
+            foreach (Note note in Notes)
+            {
+                snapshot.Add(new Note
+                {
+                    Title = note.Title,
+                    Content = note.Content,
+                    Color = note.Color,
+                    IsPinnedToDesk = note.IsPinnedToDesk
+                });
             }
 
+            return snapshot;
+        }
+
+        private void AutoSaver_SaveSucceeded()
+        {
+            PostToUi(HandleSaveSucceeded);
+        }
+
+        private void HandleSaveSucceeded()
+        {
+            if (isFlushing) return;
+
+            ResetRetryState();
+
+            if (!hasUnsavedChanges) return;
+
+            autoSaveTimer.Stop();
+            autoSaveTimer.Interval = AutoSaveDelay;
+            autoSaveTimer.Start();
+        }
+
+        private void AutoSaver_SaveFailed(Exception exception)
+        {
+            PostToUi(() => HandleSaveFailed(exception));
+        }
+
+        private void HandleSaveFailed(Exception exception)
+        {
+            if (isFlushing) return;
+
+            Debug.WriteLine(
+                $"Falha no autosave: {exception.Message}");
+
+            hasUnsavedChanges = true;
             ScheduleRetry();
 
             if (failureReported) return;
 
             failureReported = true;
+            SaveFailed?.Invoke(SaveFailureMessage);
+        }
 
-            SaveFailed?.Invoke(
-                errorMessage ?? "Não foi possível salvar as notas.");
+        private void PostToUi(Action action)
+        {
+            if (dispatcher.HasShutdownStarted ||
+                dispatcher.HasShutdownFinished)
+            {
+                return;
+            }
+
+            dispatcher.BeginInvoke(action);
         }
 
         private void ScheduleRetry()
@@ -236,6 +339,10 @@ namespace DearNotes.Services
         {
             autoSaveTimer.Stop();
             autoSaveTimer.Tick -= AutoSaveTimer_Tick;
+
+            autoSaver.SaveSucceeded -= AutoSaver_SaveSucceeded;
+            autoSaver.SaveFailed -= AutoSaver_SaveFailed;
+            autoSaver.Dispose();
 
             Notes.CollectionChanged -= OnCollectionChanged;
 

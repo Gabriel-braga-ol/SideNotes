@@ -171,19 +171,14 @@ namespace DearNotes.ViewModels
             return true;
         }
 
-        public void SaveNotes()
-        {
-            repository.SaveNotes();
-        }
-
-        public bool TrySaveNotes(out string? errorMessage)
-        {
-            return repository.TrySaveNotes(out errorMessage);
-        }
-
         public void SaveCurrentNote()
         {
             repository.SavePendingChanges();
+        }
+
+        public Task<bool> FlushAsync()
+        {
+            return repository.FlushAsync();
         }
 
         public void StopAutoSave()
