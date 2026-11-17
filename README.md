@@ -19,6 +19,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
 - Registro de falhas inesperadas em `%LocalAppData%\DearNotes\logs\app.log`, sem registrar o conteúdo das notas.
 - Execução em instância única: uma segunda abertura apenas informa que o aplicativo já está em execução.
+- Migração automática das notas da instalação anterior (`SideNotes`) na primeira execução, preservando os arquivos originais.
 - Fixação de até cinco notas no Desk, compartilhadas com o modo Janela.
 - Pílula lateral com abertura do leque por clique e prévias ao passar o mouse nas abas.
 - Editor do Desk em janela própria, com salvamento automático independente da seleção na janela principal.
@@ -104,6 +105,8 @@ A indicação de quais notas estão fixadas no Desk também é salva em `notes.j
 
 A posição vertical é armazenada proporcionalmente à área disponível e restaurada ao iniciar. Se o monitor salvo não estiver disponível, ou se o arquivo antigo não contiver seu identificador, o Desk usa o monitor principal. Se esse arquivo não existir ou contiver dados inválidos, o Desk usa a posição padrão: lado direito, centralizado no monitor principal. Falhas de leitura ou gravação da posição são registradas na saída de depuração.
 
+Na primeira execução com o nome **DearNotes**, se existir a pasta antiga `%LocalAppData%\SideNotes`, o aplicativo copia `notes.json` e `desk_position.json` para a nova pasta. Os arquivos antigos não são apagados e permanecem como cópia de segurança; uma marca interna evita repetir a cópia. Se a migração falhar, o aplicativo é encerrado sem prosseguir.
+
 Falhas inesperadas do aplicativo são registradas em:
 
 ```text
@@ -132,6 +135,7 @@ O projeto separa o modelo de dados, a interface, o estado da aplicação e o arm
 | `Services/DeskPositionStore.cs` | Leitura, validação e gravação de `desk_position.json`. |
 | `Services/DeskScreenService.cs` | Consulta dos monitores, área útil, posição do cursor e dimensões e posicionamento da janela via Win32. |
 | `Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
+| `Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
 | `Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
 | `app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |

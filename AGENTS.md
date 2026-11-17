@@ -47,6 +47,7 @@ DearNotes/
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
   Services/
     AppPaths.cs             # Caminhos de armazenamento e de log
+    StorageMigration.cs     # Cópia única dos dados da instalação anterior
     NoteStorage.cs          # Leitura, validação e gravação de notes.json
     NotesRepository.cs      # Coleção compartilhada, autosave e eventos
     DeskPositionStore.cs    # Leitura e gravação de desk_position.json
@@ -59,6 +60,7 @@ Dados persistidos (nunca versione esses arquivos nem os trate como código):
 - `%LocalAppData%\DearNotes\notes.json` — notas e estado de fixação no Desk.
 - `%LocalAppData%\DearNotes\desk_position.json` — monitor, lado e posição do Desk.
 - `%LocalAppData%\DearNotes\notes-invalid-<id>.json` — cópia preservada quando o arquivo principal é inválido.
+- `%LocalAppData%\SideNotes\...` — instalação anterior; origem da migração automática, mantida como cópia de segurança.
 
 Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segundo após a última alteração**, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
 
@@ -74,7 +76,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segund
 - **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\DearNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
 - **Instância única:** o aplicativo usa um `Mutex` nomeado. Não contorne essa proteção nem abra duas instâncias sobre o mesmo armazenamento.
 - **Evolução:** novas dependências externas exigem justificativa no README (hoje o projeto não tem nenhuma). Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
-- **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README.
+- **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README. Mudanças de nome ou de pasta de armazenamento exigem migração automática e preservação dos arquivos antigos.
 - **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views`, `DearNotes.Services`) e atualize o README e este arquivo.
 
 ## Convenções de código

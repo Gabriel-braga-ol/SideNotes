@@ -40,6 +40,18 @@ namespace DearNotes
                 return;
             }
 
+            if (!StorageMigration.TryMigrateIfNeeded(out string? migrationError))
+            {
+                MessageBox.Show(
+                    migrationError ?? "Não foi possível migrar as notas.",
+                    "DearNotes",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Shutdown(1);
+                return;
+            }
+
             MainViewModel viewModel;
             DeskViewModel deskViewModel;
 
