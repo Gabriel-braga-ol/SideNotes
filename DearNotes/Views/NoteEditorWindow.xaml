@@ -56,7 +56,8 @@
                         Foreground="{StaticResource TextSecondaryBrush}"
                         Cursor="Hand"
                         AutomationProperties.Name="Fechar nota"
-                        Command="{Binding CloseOpenedNoteCommand}"/>
+                        Command="{Binding DataContext.CloseOpenedNoteCommand,
+                                          RelativeSource={RelativeSource AncestorType=Window}}"/>
             </Grid>
 
             <TextBox Grid.Row="1"
