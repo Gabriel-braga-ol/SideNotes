@@ -57,7 +57,7 @@ namespace DearNotes
 
             try
             {
-                notesRepository = new NotesRepository();
+                notesRepository = new NotesRepository(new NoteStorage());
                 viewModel = new MainViewModel(notesRepository);
                 deskViewModel = new DeskViewModel(notesRepository);
             }
@@ -83,7 +83,13 @@ namespace DearNotes
             MainWindow window = new MainWindow(viewModel);
             window.Show();
 
-            DeskWindow deskWindow = new DeskWindow(deskViewModel);
+            var screenService = new DeskScreenService();
+            var deskPositionStore = new DeskPositionStore();
+
+            DeskWindow deskWindow = new DeskWindow(
+                deskViewModel,
+                screenService,
+                deskPositionStore);
             deskWindow.Closed += (_, _) => deskViewModel.Dispose();
             deskWindow.Show();
 

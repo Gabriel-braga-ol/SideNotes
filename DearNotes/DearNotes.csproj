@@ -11,4 +11,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>	
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DearNotes.Core\DearNotes.Core.csproj" />
+  </ItemGroup>
+
 </Project>

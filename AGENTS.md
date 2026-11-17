@@ -20,10 +20,11 @@ Execute a partir da raiz do repositório (onde está `DearNotes.slnx`):
 | --- | --- |
 | Compilar a solução | `dotnet build .\DearNotes.slnx` |
 | Executar o aplicativo | `dotnet run --project .\DearNotes\DearNotes.csproj` |
+| Executar os testes | `dotnet test .\DearNotes.slnx` |
 | Limpar artefatos | `dotnet clean .\DearNotes.slnx` |
 | Restaurar dependências | `dotnet restore .\DearNotes.slnx` |
 
-Ainda **não existe projeto de testes**. Se um for criado, adicione aqui o comando (`dotnet test`) e a descrição da suíte. Antes de considerar uma alteração concluída, o build deve terminar com **0 erros e 0 avisos**.
+A solução tem três projetos: `DearNotes` (WPF), `DearNotes.Core` (modelos, persistência e geometria) e `DearNotes.Tests` (xUnit). Antes de considerar uma alteração concluída, o build deve terminar com **0 erros e 0 avisos** e os testes devem passar.
 
 ## Estrutura do repositório
 
@@ -35,9 +36,6 @@ DearNotes/
   App.xaml, App.xaml.cs     # Composition root: cria repositório, VMs e janelas
   app.manifest              # asInvoker + reconhecimento de DPI por monitor (PerMonitorV2)
   AssemblyInfo.cs
-  Models/
-    Note.cs                 # Dados da nota + INotifyPropertyChanged
-    DeskPosition.cs         # Monitor, lado e posição vertical do Desk
   ViewModels/
     MainViewModel.cs        # Seleção, busca, ações da janela principal
     DeskViewModel.cs        # Notas fixadas, leque e estado do Desk
@@ -46,13 +44,27 @@ DearNotes/
     DeskWindow.xaml(.cs)    # Pílula lateral, leque, arraste e posicionamento
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
   Services/
-    AppPaths.cs             # Caminhos de armazenamento e de log
-    StorageMigration.cs     # Cópia única dos dados da instalação anterior
-    NoteStorage.cs          # Leitura, validação e gravação de notes.json
     NotesRepository.cs      # Coleção compartilhada, autosave e eventos
-    DeskPositionStore.cs    # Leitura e gravação de desk_position.json
     DeskScreenService.cs    # Monitores, DPI e posicionamento via Win32
+    IScreenService.cs       # Contrato de acesso a monitores e janelas
+    StorageMigration.cs     # Cópia única dos dados da instalação anterior
     AppLogger.cs            # Registro de falhas inesperadas em arquivo
+DearNotes.Core/
+  Models/
+    Note.cs                 # Dados da nota + INotifyPropertyChanged
+    DeskPosition.cs         # Monitor, lado e posição vertical do Desk
+  Services/
+    AppPaths.cs             # Caminhos de armazenamento e de log
+    NoteStorage.cs          # Leitura, validação e gravação de notes.json
+    INoteStore.cs           # Contrato de persistência das notas
+    DeskPositionStore.cs    # Leitura e gravação de desk_position.json
+    IDeskPositionStore.cs   # Contrato de persistência da posição do Desk
+    DeskGeometry.cs         # Cálculos puros de encaixe, lado e posicionamento
+DearNotes.Tests/
+  TemporaryDirectory.cs     # Pasta temporária descartável para testes de IO
+  DeskGeometryTests.cs      # Testes da geometria do Desk e do editor
+  NoteStorageTests.cs       # Testes de notes.json
+  DeskPositionStoreTests.cs # Testes de desk_position.json
 ```
 
 Dados persistidos (nunca versione esses arquivos nem os trate como código):
@@ -67,15 +79,18 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segund
 ## Regras de arquitetura
 
 - **MVVM:** Models guardam dados; ViewModels guardam estado e ações; Views contêm apenas layout, bindings e comportamento visual; Services concentram IO, Win32 e regras de infraestrutura.
+- **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo e os testes referenciam o Core, nunca o contrário.
 - **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
 - **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. Não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
 - **Persistência isolada:** somente `Services` grava ou lê arquivos. Caminhos vêm de `AppPaths`; nunca hardcode caminhos de dados no código.
 - **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
-- **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`. Code-behind não deve importar `user32.dll` diretamente.
+- **Geometria testável:** cálculos de encaixe, lado, posição normalizada e centralização do editor ficam em `DeskGeometry`, sem depender de janelas. Não duplique essa matemática no code-behind.
+- **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`, atrás de `IScreenService`. Code-behind não deve importar `user32.dll` diretamente.
+- **Testes:** comportamento novo em `DeskGeometry`, nos stores ou em regras do Core exige teste em `DearNotes.Tests`. Testes de IO usam `TemporaryDirectory` e nunca tocam em `%LocalAppData%`.
 - **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente. Falhas repetidas de autosave geram um único aviso e novas tentativas com atraso crescente.
 - **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\DearNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
 - **Instância única:** o aplicativo usa um `Mutex` nomeado. Não contorne essa proteção nem abra duas instâncias sobre o mesmo armazenamento.
-- **Evolução:** novas dependências externas exigem justificativa no README (hoje o projeto não tem nenhuma). Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
+- **Evolução:** novas dependências externas exigem justificativa no README; hoje a única dependência externa é o xUnit, restrito ao projeto de testes. Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
 - **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README. Mudanças de nome ou de pasta de armazenamento exigem migração automática e preservação dos arquivos antigos.
 - **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views`, `DearNotes.Services`) e atualize o README e este arquivo.
 
