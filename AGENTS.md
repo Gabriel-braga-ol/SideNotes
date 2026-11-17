@@ -60,11 +60,13 @@ DearNotes.Core/
     DeskPositionStore.cs    # Leitura e gravação de desk_position.json
     IDeskPositionStore.cs   # Contrato de persistência da posição do Desk
     DeskGeometry.cs         # Cálculos puros de encaixe, lado e posicionamento
+    NotesAutoSaver.cs       # Fila de gravação em segundo plano com snapshots
 DearNotes.Tests/
   TemporaryDirectory.cs     # Pasta temporária descartável para testes de IO
   DeskGeometryTests.cs      # Testes da geometria do Desk e do editor
   NoteStorageTests.cs       # Testes de notes.json
   DeskPositionStoreTests.cs # Testes de desk_position.json
+  NotesAutoSaverTests.cs    # Testes da fila de autosave
 ```
 
 Dados persistidos (nunca versione esses arquivos nem os trate como código):
@@ -74,20 +76,21 @@ Dados persistidos (nunca versione esses arquivos nem os trate como código):
 - `%LocalAppData%\DearNotes\notes-invalid-<id>.json` — cópia preservada quando o arquivo principal é inválido.
 - `%LocalAppData%\SideNotes\...` — instalação anterior; origem da migração automática, mantida como cópia de segurança.
 
-Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segundo após a última alteração**, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
+Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segundo após a última alteração**. A gravação ocorre em segundo plano, com apenas o snapshot mais recente pendente, e novas tentativas em intervalos crescentes (até 30 s) quando falha.
 
 ## Regras de arquitetura
 
 - **MVVM:** Models guardam dados; ViewModels guardam estado e ações; Views contêm apenas layout, bindings e comportamento visual; Services concentram IO, Win32 e regras de infraestrutura.
 - **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo e os testes referenciam o Core, nunca o contrário.
 - **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
-- **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. Não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
+- **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. `NotesAutoSaver` apenas executa as gravações em segundo plano; não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
+- **Autosave em segundo plano:** a serialização e a escrita recebem um snapshot imutável das notas e nunca rodam na thread da interface. Uma única gravação pode estar em andamento; snapshots pendentes são substituídos pelo mais recente. Não grave notas diretamente na thread de UI.
 - **Persistência isolada:** somente `Services` grava ou lê arquivos. Caminhos vêm de `AppPaths`; nunca hardcode caminhos de dados no código.
 - **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
 - **Geometria testável:** cálculos de encaixe, lado, posição normalizada e centralização do editor ficam em `DeskGeometry`, sem depender de janelas. Não duplique essa matemática no code-behind.
 - **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`, atrás de `IScreenService`. Code-behind não deve importar `user32.dll` diretamente.
 - **Testes:** comportamento novo em `DeskGeometry`, nos stores ou em regras do Core exige teste em `DearNotes.Tests`. Testes de IO usam `TemporaryDirectory` e nunca tocam em `%LocalAppData%`.
-- **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente. Falhas repetidas de autosave geram um único aviso e novas tentativas com atraso crescente.
+- **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente. Falhas repetidas de autosave geram um único aviso e novas tentativas com atraso crescente; ao fechar, aguarde a fila terminar e ofereça a opção de fechar mesmo assim se a gravação falhar.
 - **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\DearNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
 - **Instância única:** o aplicativo usa um `Mutex` nomeado. Não contorne essa proteção nem abra duas instâncias sobre o mesmo armazenamento.
 - **Evolução:** novas dependências externas exigem justificativa no README; hoje a única dependência externa é o xUnit, restrito ao projeto de testes. Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.

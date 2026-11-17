@@ -12,7 +12,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Cores atribuídas automaticamente a partir de uma paleta.
 - Lista com título, prévia do conteúdo e destaque da nota selecionada.
 - Busca por título ou conteúdo, sem diferenciar maiúsculas e minúsculas.
-- Salvamento automático após um segundo sem digitar, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
+- Salvamento automático após um segundo sem digitar, em segundo plano: apenas o snapshot mais recente é enfileirado, sem bloquear a interface, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
 - Persistência local em JSON.
 - Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
@@ -34,7 +34,8 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - WPF e XAML.
 - Binding de dados e `INotifyPropertyChanged`.
 - `ObservableCollection` e `ICollectionView`.
-- `DispatcherTimer` para o salvamento automático.
+- `DispatcherTimer` para o atraso do salvamento automático.
+- Gravação das notas em segundo plano a partir de snapshots imutáveis.
 - Mutex nomeado para garantir instância única do aplicativo.
 - `System.Text.Json` para leitura e gravação dos dados.
 - xUnit para os testes automatizados do núcleo.
@@ -104,7 +105,7 @@ As notas são armazenadas neste caminho do usuário do Windows:
 %LocalAppData%\DearNotes\notes.json
 ```
 
-Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substitui o arquivo principal. Ao detectar JSON ou dados inválidos, preserva uma cópia chamada `notes-invalid-<identificador>.json` e informa sua localização.
+Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substitui o arquivo principal. O autosave grava em segundo plano uma cópia das notas e, ao fechar a janela principal, aguarda a fila terminar antes de encerrar. Ao detectar JSON ou dados inválidos, preserva uma cópia chamada `notes-invalid-<identificador>.json` e informa sua localização.
 
 A indicação de quais notas estão fixadas no Desk também é salva em `notes.json`. O identificador do monitor, o lado e a posição vertical da pílula ficam em um arquivo separado:
 
@@ -140,6 +141,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Views/DeskWindow.xaml` e `DearNotes/Views/DeskWindow.xaml.cs` | Pílula lateral, leque das notas fixadas, eventos de mouse, arraste, animações e reação a mudanças de monitores e DPI. |
 | `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
 | `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, centralização do editor e posição do arraste. |
+| `DearNotes.Core/Services/NotesAutoSaver.cs` | Fila de gravação em segundo plano: mantém uma escrita por vez e substitui o snapshot pendente pelo mais recente. |
 | `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação e gravação do arquivo JSON das notas. |
 | `DearNotes.Core/Services/IDeskPositionStore.cs` e `DeskPositionStore.cs` | Contrato e implementação da leitura, validação e gravação de `desk_position.json`. |
 | `DearNotes.Core/Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
@@ -149,12 +151,13 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
 | `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, editor e arraste. |
 | `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, limites e preservação de arquivos inválidos. |
+| `DearNotes.Tests/NotesAutoSaverTests.cs` | Gravação em segundo plano, coalescência de snapshots, falhas e gravação síncrona de emergência. |
 | `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
 
 `App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto WPF. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
 
-Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas. A geometria do Desk vive em `DeskGeometry`, permitindo testar o posicionamento sem abrir janelas, e o acesso a arquivos e telas é injetado por `INoteStore`, `IDeskPositionStore` e `IScreenService`.
+Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas. A geometria do Desk vive em `DeskGeometry`, permitindo testar o posicionamento sem abrir janelas, e o acesso a arquivos e telas é injetado por `INoteStore`, `IDeskPositionStore` e `IScreenService`. O `NotesAutoSaver` recebe cópias das notas, executa a gravação em segundo plano e descarta snapshots intermediários quando já existe um mais recente; ao fechar, a janela principal aguarda a fila terminar antes de encerrar.
 
 ## Próximas etapas
 
@@ -167,6 +170,7 @@ Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos 
 - [x] Recuperar o Desk no monitor principal quando a tela utilizada for desconectada.
 - [x] Adaptar o Desk a monitores com escalas de DPI diferentes.
 - [x] Salvar as preferências do Desk, incluindo monitor, posição e notas escolhidas.
+- [x] Gravar as notas em segundo plano sem bloquear a interface.
 - [ ] Refinar o visual do leque do Desk.
 - [ ] Suavizar as animações de abertura e recolhimento.
 

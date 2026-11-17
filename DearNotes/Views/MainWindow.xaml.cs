@@ -62,9 +62,23 @@ namespace DearNotes.Views
             }
         }              
         
-        private void Window_Closing(object? sender, CancelEventArgs e)
+        private bool isClosing;
+
+        private bool closeConfirmed;
+
+        private async void Window_Closing(object? sender, CancelEventArgs e)
         {
-            if (!viewModel.TrySaveNotes(out _)) //out _ descarta a mensagem devolvida pelo método
+            if (closeConfirmed) return;
+
+            e.Cancel = true;
+
+            if (isClosing) return;
+
+            isClosing = true;
+
+            bool saved = await viewModel.FlushAsync();
+
+            if (!saved)
             {
                 MessageBoxResult answer = MessageBox.Show(
                     this,
@@ -75,8 +89,15 @@ namespace DearNotes.Views
                     MessageBoxImage.Warning,
                     MessageBoxResult.No);
 
-                e.Cancel = answer != MessageBoxResult.Yes;
+                if (answer != MessageBoxResult.Yes)
+                {
+                    isClosing = false;
+                    return;
+                }
             }
+
+            closeConfirmed = true;
+            Close();
         }
 
         private void ViewModel_SaveFailed(string message)
