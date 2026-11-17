@@ -12,9 +12,9 @@ namespace DearNotes.Services
 
         Rect GetWindowBounds(Window window);
 
-        void MoveWindow(Window window, double x, double y);
+        bool TryMoveWindow(Window window, double x, double y);
 
-        void SetWindowBounds(
+        bool TrySetWindowBounds(
             Window window,
             double x,
             double y,

@@ -23,9 +23,15 @@ namespace DearNotes.Services
             double marginX = Math.Round(ScreenMargin * dpi.DpiScaleX);
             double marginY = Math.Round(ScreenMargin * dpi.DpiScaleY);
 
+            double maxWidth = Math.Max(
+                1,
+                workArea.Width - marginX * 2);
+
             double widthPixels = Math.Max(
                 1,
-                Math.Round(logicalWidth * dpi.DpiScaleX));
+                Math.Min(
+                    Math.Round(logicalWidth * dpi.DpiScaleX),
+                    maxWidth));
 
             double heightPixels = Math.Max(
                 1,
@@ -38,6 +44,9 @@ namespace DearNotes.Services
                 workArea.Height - heightPixels - marginY * 2);
 
             double minTop = workArea.Top + marginY;
+            double maxTop = Math.Max(
+                workArea.Top,
+                workArea.Bottom - heightPixels - marginY);
 
             double top = verticalPosition.HasValue
                 ? minTop + availableHeight *
@@ -47,11 +56,19 @@ namespace DearNotes.Services
                     minTop,
                     minTop + availableHeight);
 
-            top = Math.Round(top);
+            top = Math.Clamp(
+                Math.Round(top),
+                Math.Min(minTop, maxTop),
+                maxTop);
 
             double left = isOnRight
                 ? workArea.Right - widthPixels - marginX
                 : workArea.Left + marginX;
+
+            left = Math.Clamp(
+                left,
+                workArea.Left,
+                Math.Max(workArea.Left, workArea.Right - widthPixels));
 
             return new Rect(left, top, widthPixels, heightPixels);
         }
