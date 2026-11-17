@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using DearNotes.Models;
@@ -233,7 +234,8 @@ namespace DearNotes.Services
             }
             catch (Exception ex) when (
                 ex is IOException ||
-                ex is UnauthorizedAccessException)
+                ex is UnauthorizedAccessException ||
+                ex is CryptographicException)
             {
                 failure = ex;
                 return false;

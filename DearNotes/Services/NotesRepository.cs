@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using DearNotes.Models;
@@ -188,7 +189,8 @@ namespace DearNotes.Services
             }
             catch (Exception ex) when (
                 ex is IOException ||
-                ex is UnauthorizedAccessException)
+                ex is UnauthorizedAccessException ||
+                ex is CryptographicException)
             {
                 Debug.WriteLine(
                     $"Falha ao salvar as notas: {ex.Message}");
@@ -241,13 +243,7 @@ namespace DearNotes.Services
 
             foreach (Note note in Notes)
             {
-                snapshot.Add(new Note
-                {
-                    Title = note.Title,
-                    Content = note.Content,
-                    Color = note.Color,
-                    IsPinnedToDesk = note.IsPinnedToDesk
-                });
+                snapshot.Add(note.CreateSnapshot());
             }
 
             return snapshot;

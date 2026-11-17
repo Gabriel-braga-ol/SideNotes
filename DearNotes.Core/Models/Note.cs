@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.ComponentModel;
 
 namespace DearNotes.Models
@@ -9,41 +7,80 @@ namespace DearNotes.Models
     {
         private string title = string.Empty;
         private string content = string.Empty;
-        public string Color { get; set; } = "#B8E6D0";
-        public event PropertyChangedEventHandler? PropertyChanged;
+        private string color = "#B8E6D0";
         private bool isPinnedToDesk;
+        private DateTimeOffset updatedAt;
+
+        public Note()
+        {
+            Id = Guid.NewGuid();
+            CreatedAt = DateTimeOffset.UtcNow;
+            updatedAt = CreatedAt;
+        }
+
+        // Usado ao carregar o arquivo para preservar identidade e datas gravadas.
+        public Note(
+            Guid id,
+            string title,
+            string content,
+            string color,
+            bool isPinnedToDesk,
+            DateTimeOffset createdAt,
+            DateTimeOffset updatedAt)
+        {
+            Id = id;
+            this.title = title;
+            this.content = content;
+            this.color = color;
+            this.isPinnedToDesk = isPinnedToDesk;
+            CreatedAt = createdAt;
+            this.updatedAt = updatedAt;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public Guid Id { get; }
+
+        public DateTimeOffset CreatedAt { get; }
+
+        public DateTimeOffset UpdatedAt => updatedAt;
+
+        public string Color
+        {
+            get => color;
+            set
+            {
+                if (color == value) return;
+
+                color = value;
+                Touch();
+                Notify(nameof(Color));
+            }
+        }
 
         public bool IsPinnedToDesk
         {
             get => isPinnedToDesk;
             set
             {
-                if (isPinnedToDesk == value) return;          
+                if (isPinnedToDesk == value) return;
 
                 isPinnedToDesk = value;
-
-                PropertyChanged?.Invoke(
-                    this,
-                    new PropertyChangedEventArgs(nameof(IsPinnedToDesk)));
+                Touch();
+                Notify(nameof(IsPinnedToDesk));
             }
         }
-
 
         public string Title
         {
             get => title;
             set
             {
-                if (title == value)
-                {
-                    return;
-                }
+                if (title == value) return;
 
                 title = value;
-
-                PropertyChanged?.Invoke(
-                    this,
-                    new PropertyChangedEventArgs(nameof(Title)));
+                Touch();
+                Notify(nameof(Title));
             }
         }
 
@@ -52,17 +89,37 @@ namespace DearNotes.Models
             get => content;
             set
             {
-                if (content == value)
-                {
-                    return;
-                }
-                
+                if (content == value) return;
+
                 content = value;
-                
-                PropertyChanged?.Invoke(
-                    this,
-                    new PropertyChangedEventArgs(nameof(Content)));
+                Touch();
+                Notify(nameof(Content));
             }
+        }
+
+        // Cópia imutável para gravação em segundo plano.
+        public Note CreateSnapshot()
+        {
+            return new Note(
+                Id,
+                title,
+                content,
+                color,
+                isPinnedToDesk,
+                CreatedAt,
+                updatedAt);
+        }
+
+        private void Touch()
+        {
+            updatedAt = DateTimeOffset.UtcNow;
+        }
+
+        private void Notify(string propertyName)
+        {
+            PropertyChanged?.Invoke(
+                this,
+                new PropertyChangedEventArgs(propertyName));
         }
     }
 }

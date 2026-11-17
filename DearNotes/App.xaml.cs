@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -57,19 +58,24 @@ namespace DearNotes
 
             try
             {
-                notesRepository = new NotesRepository(new NoteStorage());
+                var noteEncryption = new AesGcmNoteEncryption(
+                    new DpapiKeyProvider(AppPaths.NotesKeyFilePath));
+
+                notesRepository = new NotesRepository(
+                    new NoteStorage(noteEncryption));
+
                 viewModel = new MainViewModel(notesRepository);
                 deskViewModel = new DeskViewModel(notesRepository);
             }
             catch (Exception ex) when (
                 ex is IOException ||
-                ex is UnauthorizedAccessException)
+                ex is UnauthorizedAccessException ||
+                ex is CryptographicException)
             {
                 AppLogger.LogError("Falha ao carregar as notas", ex);
 
                 MessageBox.Show(
-                    "Não foi possível carregar as notas ou preservar uma cópia " +
-                    "do arquivo inválido.\n\n" +
+                    "Não foi possível carregar ou descriptografar as notas.\n\n" +
                     "O aplicativo será encerrado sem salvar alterações.\n\n" +
                     "Detalhes: " + ex.Message,
                     "DearNotes",

@@ -12,6 +12,8 @@ namespace DearNotes.Services
 
         public static string NotesFilePath { get; } = Path.Combine(DataDirectory, "notes.json");
 
+        public static string NotesKeyFilePath { get; } = Path.Combine(DataDirectory, "notes.key");
+
         public static string DeskPositionFilePath { get; } = Path.Combine(DataDirectory, "desk_position.json");
 
         public static string LogsDirectory { get; } = Path.Combine(DataDirectory, "logs");
