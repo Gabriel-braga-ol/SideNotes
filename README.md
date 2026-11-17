@@ -189,7 +189,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |
 | `DearNotes/ViewModels/DeskViewModel.cs` | Visão das notas fixadas, estado do Desk e transições de abertura, fechamento, expansão e mudança de lado. |
 | `DearNotes/Views/MainWindow.xaml` | Layout, estilos e bindings da interface. |
-| `DearNotes/Views/MainWindow.xaml.cs` | Interações visuais, foco, atalhos e apresentação de avisos. |
+| `DearNotes/Views/MainWindow.xaml.cs` | Interações visuais, foco e atalhos da janela principal. |
 | `DearNotes/Views/DeskWindow.xaml` e `DearNotes/Views/DeskWindow.xaml.cs` | Pílula lateral, leque das notas fixadas, eventos de mouse, arraste, animações e reação a mudanças de monitores e DPI. |
 | `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
 | `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, centralização do editor e posição do arraste. |
@@ -201,6 +201,9 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes.Core/Services/IDeskPositionStore.cs` e `DeskPositionStore.cs` | Contrato e implementação da leitura, validação e gravação de `desk_position.json`. |
 | `DearNotes.Core/Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
 | `DearNotes/Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
+| `DearNotes/Services/IDialogService.cs` e `MessageBoxDialogService.cs` | Contrato e implementação dos avisos e confirmações exibidos ao usuário, sem `MessageBox` nas Views. |
+| `DearNotes/ViewModels/RelayCommand.cs` | Implementação de `ICommand` usada pelas ações dos ViewModels. |
+| `DearNotes/Themes/Theme.xaml` | Paleta de brushes compartilhada pelas janelas, carregada em `App.xaml`. |
 | `DearNotes/Services/IScreenService.cs` e `DeskScreenService.cs` | Contrato e implementação da consulta dos monitores, área útil, DPI efetivo, posição do cursor e dimensões e posicionamento tolerante a falhas da janela via Win32. |
 | `DearNotes/Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
 | `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |

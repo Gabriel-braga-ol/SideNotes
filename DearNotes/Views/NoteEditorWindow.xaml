@@ -1,4 +1,4 @@
-﻿<Window x:Class="DearNotes.Views.NoteEditorWindow"
+<Window x:Class="DearNotes.Views.NoteEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{Binding OpenedNote.Title}"
@@ -19,7 +19,7 @@
     <Border DataContext="{Binding OpenedNote}"
             Background="{Binding Color}"
             CornerRadius="16"
-            BorderBrush="#24000000"
+            BorderBrush="{StaticResource EditorOutlineBrush}"
             BorderThickness="1"
             Padding="18">
 
@@ -42,7 +42,7 @@
                         MouseLeftButtonDown="Header_MouseLeftButtonDown">
                     <TextBlock Text="DearNotes"
                                FontSize="11"
-                               Foreground="#80242A28"
+                               Foreground="{StaticResource EditorHeaderTextBrush}"
                                VerticalAlignment="Center"
                                IsHitTestVisible="False"/>
                 </Border>
@@ -53,10 +53,10 @@
                         Height="28"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="#343B37"
+                        Foreground="{StaticResource TextSecondaryBrush}"
                         Cursor="Hand"
                         AutomationProperties.Name="Fechar nota"
-                        Click="Close_Click"/>
+                        Command="{Binding CloseOpenedNoteCommand}"/>
             </Grid>
 
             <TextBox Grid.Row="1"
@@ -65,7 +65,7 @@
                                     UpdateSourceTrigger=PropertyChanged}"
                      FontSize="19"
                      FontWeight="SemiBold"
-                     Foreground="#242A28"
+                     Foreground="{StaticResource TextStrongBrush}"
                      Background="Transparent"
                      BorderThickness="0"
                      Padding="0"
@@ -81,7 +81,7 @@
                                     Mode=TwoWay,
                                     UpdateSourceTrigger=PropertyChanged}"
                      FontSize="14"
-                     Foreground="#343B37"
+                     Foreground="{StaticResource TextSecondaryBrush}"
                      Background="Transparent"
                      BorderThickness="0"
                      Padding="0"

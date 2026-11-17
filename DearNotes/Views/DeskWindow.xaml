@@ -1,4 +1,4 @@
-﻿<Window x:Class="DearNotes.Views.DeskWindow"
+<Window x:Class="DearNotes.Views.DeskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="DearNotes — Desk"
@@ -70,14 +70,14 @@
                                                       RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                 Background="{Binding Color}"
                                 CornerRadius="8"
-                                BorderBrush="#20000000"
+                                BorderBrush="{StaticResource NoteCardBorderBrush}"
                                 BorderThickness="1"
                                 Cursor="Hand"
                                 MouseLeftButtonDown="NoteTab_MouseLeftButtonDown"
                                 RenderTransformOrigin="0.5,0.5">
 
                             <Border.Effect>
-                                <DropShadowEffect Color="#000000"
+                                <DropShadowEffect Color="{StaticResource ShadowColor}"
                                                   BlurRadius="10"
                                                   ShadowDepth="2"
                                                   Opacity="0.16"/>
@@ -103,7 +103,7 @@
                                                Margin="0,8,0,0"
                                                FontSize="10"
                                                FontWeight="Medium"
-                                               Foreground="#A6222826"
+                                               Foreground="{StaticResource NoteTabTitleBrush}"
                                                TextTrimming="CharacterEllipsis"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Top">
@@ -123,7 +123,7 @@
                                           Width="1"
                                           Margin="0,10,0,10"
                                           HorizontalAlignment="Right"
-                                          Stroke="#30222826"
+                                          Stroke="{StaticResource NoteTabDividerBrush}"
                                           StrokeThickness="1"
                                           StrokeDashArray="3,3"
                                           Visibility="Collapsed"
@@ -147,7 +147,7 @@
                                                Text="{Binding Title}"
                                                FontSize="15"
                                                FontWeight="SemiBold"
-                                               Foreground="#242A28"
+                                               Foreground="{StaticResource TextStrongBrush}"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,0,0,8"/>
 
@@ -155,7 +155,7 @@
                                                Text="{Binding Content}"
                                                FontSize="13"
                                                LineHeight="19"
-                                               Foreground="#C7242A28"
+                                               Foreground="{StaticResource NotePreviewTextBrush}"
                                                TextWrapping="Wrap"
                                                TextTrimming="CharacterEllipsis"/>
                                 </Grid>
@@ -181,7 +181,7 @@
 
                             <Setter TargetName="NoteCard"
                                     Property="BorderBrush"
-                                    Value="#30000000"/>
+                                    Value="{StaticResource NoteCardActiveBorderBrush}"/>
 
                             <Setter TargetName="TabDivider"
                                     Property="Visibility"
@@ -198,7 +198,7 @@
                             <Setter TargetName="NoteCard"
                                     Property="Effect">
                                 <Setter.Value>
-                                    <DropShadowEffect Color="#000000"
+                                    <DropShadowEffect Color="{StaticResource ShadowColor}"
                                                       BlurRadius="12"
                                                       ShadowDepth="3"
                                                       Opacity="0.20"/>
@@ -235,10 +235,10 @@
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background"
-                                Value="#B3272B30"/>
+                                Value="{StaticResource DeskPillBackgroundBrush}"/>
 
                         <Setter Property="BorderBrush"
-                                Value="#40FFFFFF"/>
+                                Value="{StaticResource DeskPillBorderBrush}"/>
 
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsMouseOver,
@@ -246,10 +246,10 @@
                                          Value="True">
 
                                 <Setter Property="Background"
-                                        Value="#E033383F"/>
+                                        Value="{StaticResource DeskPillHoverBackgroundBrush}"/>
 
                                 <Setter Property="BorderBrush"
-                                        Value="#70FFFFFF"/>
+                                        Value="{StaticResource DeskPillHoverBorderBrush}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

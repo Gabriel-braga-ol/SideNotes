@@ -1,4 +1,4 @@
-﻿<Window x:Class="DearNotes.Views.MainWindow"
+<Window x:Class="DearNotes.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -13,7 +13,7 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
         ResizeMode="CanResize"
-        Background="#F5F6F8"
+        Background="{StaticResource WindowBackgroundBrush}"
         PreviewKeyDown="Window_PreviewKeyDown"
         Closing="Window_Closing">
 
@@ -41,10 +41,10 @@
                         FontSize="14"
                         FontWeight="SemiBold"
                         Foreground="White"
-                        Background="#31544B"
+                        Background="{StaticResource AccentBrush}"
                         BorderThickness="0"
                         Cursor="Hand"
-                        Click="AddNote_Click">
+                        Command="{Binding CreateNoteCommand}">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="ButtonBorder"
@@ -60,13 +60,13 @@
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="ButtonBorder"
                                             Property="Background"
-                                            Value="#426B60"/>
+                                            Value="{StaticResource AccentHoverBrush}"/>
                                 </Trigger>
 
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter TargetName="ButtonBorder"
                                             Property="Background"
-                                            Value="#243F38"/>
+                                            Value="{StaticResource AccentPressedBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -77,7 +77,7 @@
                             Margin="0,0,0,12">
                     <TextBlock Text="Buscar notas"
                                FontSize="12"
-                               Foreground="#687078"
+                               Foreground="{StaticResource TextMutedBrush}"
                                Margin="0,0,0,6"/>
 
                     <Border Background="White"
@@ -86,11 +86,11 @@
                             Padding="10,8">
                         <Border.Style>
                             <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="#D5DADC"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
 
                                 <Style.Triggers>
                                     <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                        <Setter Property="BorderBrush" Value="#31544B"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -100,7 +100,7 @@
                                                 Mode=TwoWay,
                                                 UpdateSourceTrigger=PropertyChanged}"
                                  FontSize="14"
-                                 Foreground="#1E3A34"
+                                 Foreground="{StaticResource TextPrimaryBrush}"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  VerticalContentAlignment="Center"
@@ -143,7 +143,7 @@
                             <Setter Property="Margin" Value="0,4"/>
                             <Setter Property="Padding" Value="0"/>
                             <Setter Property="Background" Value="{Binding Color}"/>
-                            <Setter Property="Foreground" Value="#1E3A34"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             <Setter Property="HorizontalContentAlignment"
                                     Value="Stretch"/>
                             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -167,7 +167,7 @@
                                                      Value="True">
                                                 <Setter TargetName="NoteItemBorder"
                                                         Property="BorderBrush"
-                                                        Value="#31544B"/>
+                                                        Value="{StaticResource AccentBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -182,7 +182,7 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,24,0,0"
-                           Foreground="#687078"
+                           Foreground="{StaticResource TextMutedBrush}"
                            IsHitTestVisible="False">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -242,7 +242,7 @@
                          FontSize="24"
                          TextWrapping="NoWrap"
                          FontWeight="SemiBold"
-                         Foreground="#1E3A34"
+                         Foreground="{StaticResource TextPrimaryBrush}"
                          Background="Transparent"
                          BorderThickness="0"
                          Margin="0,0,0,20"/>
@@ -255,7 +255,7 @@
                                         TargetNullValue='',
                                         FallbackValue=''}"
                          FontSize="16"
-                         Foreground="#31544B"
+                         Foreground="{StaticResource AccentBrush}"
                          Background="Transparent"
                          BorderThickness="0"
                          AcceptsReturn="True"
@@ -269,12 +269,12 @@
                         HorizontalAlignment="Right"
                         Margin="0,16,0,0"
                         Cursor="Hand"
-                        Click="ToggleDeskPin_Click">
+                        Command="{Binding ToggleDeskPinCommand}">
 
                     <Button.Style>
                         <Style TargetType="Button">
-                            <Setter Property="Background" Value="#B3ECEDEF"/>
-                            <Setter Property="Foreground" Value="#7D828A"/>
+                            <Setter Property="Background" Value="{StaticResource PinBackgroundBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource PinIconBrush}"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
                             <Setter Property="ToolTip" Value="Fixar no Desk"/>
                             <Setter Property="AutomationProperties.Name"
@@ -284,7 +284,7 @@
                                 <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
                                              Value="True">
                                     <Setter Property="BorderBrush" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="#626870"/>
+                                    <Setter Property="Foreground" Value="{StaticResource PinIconActiveBrush}"/>
                                     <Setter Property="ToolTip" Value="Desafixar do Desk"/>
                                     <Setter Property="AutomationProperties.Name"
                                             Value="Desafixar do Desk"/>
@@ -335,7 +335,7 @@
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Circle"
                                             Property="Background"
-                                            Value="#E6ECEDEF"/>
+                                            Value="{StaticResource PinHoverBackgroundBrush}"/>
                                 </Trigger>
 
                                 <Trigger Property="IsPressed" Value="True">
@@ -348,7 +348,7 @@
                                              Value="True">
                                     <Setter TargetName="PinIcon"
                                             Property="Fill"
-                                            Value="#626870"/>
+                                            Value="{StaticResource PinIconActiveBrush}"/>
                                 </DataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -362,7 +362,7 @@
            HorizontalAlignment="Center"
            VerticalAlignment="Center"
            FontSize="18"
-           Foreground="#687078"
+           Foreground="{StaticResource TextMutedBrush}"
            IsHitTestVisible="False">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">

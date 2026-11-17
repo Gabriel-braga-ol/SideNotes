@@ -84,10 +84,5 @@ namespace DearNotes.Views
             e.Handled = true;
             DragMove();
         }
-
-        private void Close_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
     }
 }
