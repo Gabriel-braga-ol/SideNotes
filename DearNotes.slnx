@@ -3,5 +3,7 @@
     <File Path=".gitignore" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="DearNotes.Core/DearNotes.Core.csproj" />
+  <Project Path="DearNotes.Tests/DearNotes.Tests.csproj" />
   <Project Path="DearNotes/DearNotes.csproj" />
 </Solution>

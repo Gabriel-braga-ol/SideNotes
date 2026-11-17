@@ -33,6 +33,8 @@ namespace DearNotes.Services
 
         private readonly HashSet<Note> trackedNotes = new();
 
+        private readonly INoteStore noteStore;
+
         private static readonly TimeSpan AutoSaveDelay =
             TimeSpan.FromSeconds(1);
 
@@ -53,10 +55,12 @@ namespace DearNotes.Services
             "#A8D8EA"
         };
 
-        public NotesRepository()
+        public NotesRepository(INoteStore noteStore)
         {
+            this.noteStore = noteStore;
+
             Notes = new ObservableCollection<Note>(
-                NoteStorage.Load(out string? warningMessage));
+                noteStore.Load(out string? warningMessage));
 
             LoadWarningMessage = warningMessage;
 
@@ -147,7 +151,7 @@ namespace DearNotes.Services
         {
             autoSaveTimer.Stop();
 
-            NoteStorage.Save(Notes.ToList());
+            noteStore.Save(Notes.ToList());
 
             hasUnsavedChanges = false;
 

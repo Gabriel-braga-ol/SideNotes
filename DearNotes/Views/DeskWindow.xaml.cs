@@ -16,11 +16,9 @@ namespace DearNotes.Views
 {
     public partial class DeskWindow : Window
     {
-        private const double CollapsedWidth = 24;
+        private const double CollapsedWidth = DeskGeometry.CollapsedWidth;
 
-        private const double ExpandedWidth = 256;
-
-        private const double ScreenMargin = 8;
+        private const double ExpandedWidth = DeskGeometry.ExpandedWidth;
 
         private double currentVerticalPosition = 0.5;
 
@@ -32,7 +30,9 @@ namespace DearNotes.Views
 
         private readonly DeskViewModel viewModel;
 
-        private readonly DeskPositionStore positionStore = new();
+        private readonly IScreenService screenService;
+
+        private readonly IDeskPositionStore positionStore;
 
         private bool isDragging;
 
@@ -63,13 +63,18 @@ namespace DearNotes.Views
             Interval = TimeSpan.FromMilliseconds(300)
         };
 
-        public DeskWindow(DeskViewModel viewModel)
+        public DeskWindow(
+            DeskViewModel viewModel,
+            IScreenService screenService,
+            IDeskPositionStore positionStore)
         {
             InitializeComponent();
 
             preferredHeight = Height;
 
             this.viewModel = viewModel;
+            this.screenService = screenService;
+            this.positionStore = positionStore;
             DataContext = viewModel;
 
             collapseTimer.Tick += CollapseTimer_Tick;
@@ -90,11 +95,11 @@ namespace DearNotes.Views
 
             DeskPosition position = positionStore.Load();
 
-            currentScreen = DeskScreenService.FindOrPrimary(position.MonitorDeviceName);
+            currentScreen = screenService.FindOrPrimary(position.MonitorDeviceName);
 
             Rect area = currentScreen.WorkArea;
 
-            DeskScreenService.MoveWindow(
+            screenService.MoveWindow(
                 this,
                 area.Left,
                 area.Top);
@@ -229,53 +234,31 @@ namespace DearNotes.Views
         {
             if (currentScreen is null) return;
 
-            Rect area = currentScreen.WorkArea;
-            Rect bounds = DeskScreenService.GetWindowBounds(this);
+            DpiScale dpi = VisualTreeHelper.GetDpi(this);
 
-            var dpi = VisualTreeHelper.GetDpi(this);
+            Rect bounds = screenService.GetWindowBounds(this);
 
-            double marginX = Math.Round(ScreenMargin * dpi.DpiScaleX);
-            double marginY = Math.Round(ScreenMargin * dpi.DpiScaleY);
+            Rect target = DeskGeometry.ComputeSnapBounds(
+                currentScreen.WorkArea,
+                dpi,
+                widthInDips ?? requestedDeskWidth,
+                preferredHeight,
+                viewModel.IsOnRight,
+                verticalPosition,
+                bounds.Top);
 
-            double logicalWidth = widthInDips ?? requestedDeskWidth;
-
-            double widthPixels = Math.Max(
-                1,
-                Math.Round(logicalWidth * dpi.DpiScaleX));
-
-            double heightPixels = Math.Max(
-                1,
-                Math.Min(
-                    Math.Round(preferredHeight * dpi.DpiScaleY),
-                    area.Height - marginY * 2));
-
-            double availableHeight = Math.Max(
-                0,
-                area.Height - heightPixels - marginY * 2);
-
-            double minTop = area.Top + marginY;
-
-            double top = verticalPosition.HasValue
-                ? minTop + availableHeight *
-                  Math.Clamp(verticalPosition.Value, 0, 1)
-                : Math.Clamp(bounds.Top, minTop, minTop + availableHeight);
-
-            top = Math.Round(top);
-
-            double left = viewModel.IsOnRight
-                ? area.Right - widthPixels - marginX
-                : area.Left + marginX;
-
-            DeskScreenService.SetWindowBounds(
+            screenService.SetWindowBounds(
                 this,
-                left,
-                top,
-                widthPixels,
-                heightPixels);
+                target.Left,
+                target.Top,
+                target.Width,
+                target.Height);
 
-            currentVerticalPosition = availableHeight > 0
-                ? Math.Clamp((top - minTop) / availableHeight, 0, 1)
-                : verticalPosition ?? currentVerticalPosition;
+            currentVerticalPosition = DeskGeometry.ComputeNormalizedTop(
+                currentScreen.WorkArea,
+                target,
+                dpi,
+                verticalPosition ?? currentVerticalPosition);
         }
 
         protected override void OnClosed(EventArgs e)
@@ -405,7 +388,7 @@ namespace DearNotes.Views
 
             if (isDragging || currentScreen is null)
             {
-                Rect bounds = DeskScreenService.GetWindowBounds(this);
+                Rect bounds = screenService.GetWindowBounds(this);
 
                 var dpi = VisualTreeHelper.GetDpi(this);
 
@@ -417,7 +400,7 @@ namespace DearNotes.Views
                     ? bounds.Right - widthPixels
                     : bounds.Left;
 
-                DeskScreenService.SetWindowBounds(
+                screenService.SetWindowBounds(
                     this,
                     left,
                     bounds.Top,
@@ -438,7 +421,10 @@ namespace DearNotes.Views
 
             if (editorWindow is null)
             {
-                editorWindow = new NoteEditorWindow(viewModel, currentScreen);
+                editorWindow = new NoteEditorWindow(
+                    viewModel,
+                    currentScreen,
+                    screenService);
                 editorWindow.Closed += EditorWindow_Closed;
                 editorWindow.Show();
             }
@@ -526,38 +512,33 @@ namespace DearNotes.Views
         {
             if (currentScreen is null) return;
 
-            Rect area = currentScreen.WorkArea;
-            Rect bounds = DeskScreenService.GetWindowBounds(this);
+            Rect bounds = screenService.GetWindowBounds(this);
 
-            var dpi = VisualTreeHelper.GetDpi(this);
-
-            double marginY = ScreenMargin * dpi.DpiScaleY;
-
-            double availableHeight = Math.Max(
-                0,
-                area.Height - bounds.Height - marginY * 2);
-
-            double verticalPosition = availableHeight > 0
-                ? (bounds.Top - area.Top - marginY) / availableHeight
-                : 0.5;
+            DpiScale dpi = VisualTreeHelper.GetDpi(this);
 
             positionStore.Save(new DeskPosition
             {
                 MonitorDeviceName = currentScreen.DeviceName,
                 IsOnRight = viewModel.IsOnRight,
-                VerticalPosition = Math.Clamp(verticalPosition, 0, 1)
+                VerticalPosition = DeskGeometry.ComputeNormalizedTop(
+                    currentScreen.WorkArea,
+                    bounds,
+                    dpi,
+                    fallback: 0.5)
             });
         }
 
         private void MoveDeskWithMouse()
         {
-            Point mouse = DeskScreenService.GetMousePosition();
-            Rect bounds = DeskScreenService.GetWindowBounds(this);
+            Point mouse = screenService.GetMousePosition();
+            Rect bounds = screenService.GetWindowBounds(this);
 
-            double left = mouse.X - bounds.Width * dragAnchor.X;
-            double top = mouse.Y - bounds.Height * dragAnchor.Y;
+            Point position = DeskGeometry.ComputeDragPosition(
+                mouse,
+                bounds,
+                dragAnchor);
 
-            DeskScreenService.MoveWindow(this, left, top);
+            screenService.MoveWindow(this, position.X, position.Y);
         }
 
         private void Pill_MouseRightButtonDown(
@@ -574,9 +555,9 @@ namespace DearNotes.Views
             viewModel.SetExpanded(false);
             CollapseImmediately();
 
-            Point mouse = DeskScreenService.GetMousePosition();
+            Point mouse = screenService.GetMousePosition();
 
-            Rect bounds = DeskScreenService.GetWindowBounds(this);
+            Rect bounds = screenService.GetWindowBounds(this);
 
             dragAnchor = new Point(
                 Math.Clamp(
@@ -630,15 +611,14 @@ namespace DearNotes.Views
 
             if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
 
-            Point mouse = DeskScreenService.GetMousePosition();
+            Point mouse = screenService.GetMousePosition();
 
-            currentScreen = DeskScreenService.FromPoint(mouse);
+            currentScreen = screenService.FromPoint(mouse);
 
-            Rect area = currentScreen.WorkArea;
-
-            double screenCenter = area.Left + area.Width / 2;
-
-            viewModel.SetSide(mouse.X >= screenCenter);
+            viewModel.SetSide(
+                DeskGeometry.IsOnRightSide(
+                    currentScreen.WorkArea,
+                    mouse.X));
 
             UpdateSideLayout();
             SnapToEdge();
@@ -716,7 +696,7 @@ namespace DearNotes.Views
 
             double verticalPosition = currentVerticalPosition;
 
-            DeskScreen nextScreen = DeskScreenService.FindOrPrimary(currentScreen.DeviceName);
+            DeskScreen nextScreen = screenService.FindOrPrimary(currentScreen.DeviceName);
 
             isDragging = false;
 
@@ -755,7 +735,7 @@ namespace DearNotes.Views
                         return;
                     }
 
-                    currentScreen = DeskScreenService.FindOrPrimary(
+                    currentScreen = screenService.FindOrPrimary(
                         currentScreen.DeviceName);
 
                     SnapToEdge(

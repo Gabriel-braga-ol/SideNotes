@@ -12,7 +12,7 @@ namespace DearNotes.Services
         Rect WorkArea,
         bool IsPrimary);
 
-    public static class DeskScreenService
+    public sealed class DeskScreenService : IScreenService
     {
         private const uint MonitorDefaultToNearest = 2;
 
@@ -20,7 +20,7 @@ namespace DearNotes.Services
         private const uint SwpNoZOrder = 0x0004;
         private const uint SwpNoActivate = 0x0010;
 
-        public static DeskScreen FindOrPrimary(string? deviceName)
+        public DeskScreen FindOrPrimary(string? deviceName)
         {
             var screens = new List<DeskScreen>();
 
@@ -50,7 +50,7 @@ namespace DearNotes.Services
                        "Nenhum monitor disponível.");
         }
 
-        public static DeskScreen FromPoint(Point point)
+        public DeskScreen FromPoint(Point point)
         {
             var nativePoint = new NativePoint
             {
@@ -65,7 +65,7 @@ namespace DearNotes.Services
             return ReadScreen(monitor);
         }
 
-        public static Point GetMousePosition()
+        public Point GetMousePosition()
         {
             if (!GetCursorPos(out NativePoint point))
             {
@@ -75,7 +75,7 @@ namespace DearNotes.Services
             return new Point(point.X, point.Y);
         }
 
-        public static Rect GetWindowBounds(Window window)
+        public Rect GetWindowBounds(Window window)
         {
             IntPtr handle = new WindowInteropHelper(window).Handle;
 
@@ -87,7 +87,7 @@ namespace DearNotes.Services
             return ToRect(rect);
         }
 
-        public static void MoveWindow(Window window, double x, double y)
+        public void MoveWindow(Window window, double x, double y)
         {
             IntPtr handle = new WindowInteropHelper(window).Handle;
 
@@ -104,7 +104,7 @@ namespace DearNotes.Services
             }
         }
 
-        public static void SetWindowBounds(Window window, double x, double y, double width, double height)
+        public void SetWindowBounds(Window window, double x, double y, double width, double height)
         {
             IntPtr handle = new WindowInteropHelper(window).Handle;
 

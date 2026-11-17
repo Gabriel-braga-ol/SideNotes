@@ -37,6 +37,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - `DispatcherTimer` para o salvamento automático.
 - Mutex nomeado para garantir instância única do aplicativo.
 - `System.Text.Json` para leitura e gravação dos dados.
+- xUnit para os testes automatizados do núcleo.
 - APIs do Windows (Win32) via P/Invoke para consultar monitores e posicionar o Desk.
 - Reconhecimento de DPI por monitor com `PerMonitorV2` no manifesto do aplicativo.
 
@@ -61,6 +62,14 @@ Na pasta raiz do repositório, que contém `DearNotes.slnx`, execute:
 
 ```powershell
 dotnet run --project ".\DearNotes\DearNotes.csproj"
+```
+
+### Testes
+
+Os testes automatizados cobrem a geometria do Desk e a leitura e gravação dos arquivos JSON. Execute na raiz do repositório:
+
+```powershell
+dotnet test ".\DearNotes.slnx"
 ```
 
 ## Como usar
@@ -117,32 +126,35 @@ O arquivo é rotacionado ao atingir cerca de 1 MB e não contém o título nem o
 
 ## Organização do código
 
-O projeto separa o modelo de dados, a interface, o estado da aplicação e o armazenamento, seguindo uma organização baseada em MVVM. Dentro de `DearNotes/`, os arquivos estão agrupados nas pastas `Models`, `ViewModels`, `Views` e `Services`, com namespaces correspondentes (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views` e `DearNotes.Services`).
+O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `DearNotes.Core` (modelos, persistência e geometria do Desk, sem dependência das janelas) e `DearNotes.Tests` (testes automatizados com xUnit). A interface segue uma organização baseada em MVVM, com namespaces correspondentes (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views` e `DearNotes.Services`). As dependências apontam para o núcleo: o aplicativo e os testes referenciam `DearNotes.Core`, nunca o contrário.
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `App.xaml` e `App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
-| `Models/Note.cs` | Dados da nota, incluindo fixação no Desk, e notificações de alteração. |
-| `Models/DeskPosition.cs` | Identificador do monitor, lado e posição vertical do Desk. |
-| `ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |
-| `ViewModels/DeskViewModel.cs` | Visão das notas fixadas, estado do Desk e transições de abertura, fechamento, expansão e mudança de lado. |
-| `Views/MainWindow.xaml` | Layout, estilos e bindings da interface. |
-| `Views/MainWindow.xaml.cs` | Interações visuais, foco, atalhos e apresentação de avisos. |
-| `Views/DeskWindow.xaml` e `Views/DeskWindow.xaml.cs` | Pílula lateral, leque das notas fixadas, eventos de mouse, arraste, animações, posicionamento e reação a mudanças de monitores e DPI. |
-| `Views/NoteEditorWindow.xaml` e `Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
-| `Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
-| `Services/NoteStorage.cs` | Leitura, validação e gravação do arquivo JSON das notas. |
-| `Services/DeskPositionStore.cs` | Leitura, validação e gravação de `desk_position.json`. |
-| `Services/DeskScreenService.cs` | Consulta dos monitores, área útil, posição do cursor e dimensões e posicionamento da janela via Win32. |
-| `Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
-| `Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
-| `Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
-| `app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
+| `DearNotes/App.xaml` e `DearNotes/App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
+| `DearNotes.Core/Models/Note.cs` | Dados da nota, incluindo fixação no Desk, e notificações de alteração. |
+| `DearNotes.Core/Models/DeskPosition.cs` | Identificador do monitor, lado e posição vertical do Desk. |
+| `DearNotes/ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |
+| `DearNotes/ViewModels/DeskViewModel.cs` | Visão das notas fixadas, estado do Desk e transições de abertura, fechamento, expansão e mudança de lado. |
+| `DearNotes/Views/MainWindow.xaml` | Layout, estilos e bindings da interface. |
+| `DearNotes/Views/MainWindow.xaml.cs` | Interações visuais, foco, atalhos e apresentação de avisos. |
+| `DearNotes/Views/DeskWindow.xaml` e `DearNotes/Views/DeskWindow.xaml.cs` | Pílula lateral, leque das notas fixadas, eventos de mouse, arraste, animações e reação a mudanças de monitores e DPI. |
+| `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
+| `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, centralização do editor e posição do arraste. |
+| `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação e gravação do arquivo JSON das notas. |
+| `DearNotes.Core/Services/IDeskPositionStore.cs` e `DeskPositionStore.cs` | Contrato e implementação da leitura, validação e gravação de `desk_position.json`. |
+| `DearNotes.Core/Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
+| `DearNotes/Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
+| `DearNotes/Services/IScreenService.cs` e `DeskScreenService.cs` | Contrato e implementação da consulta dos monitores, área útil, posição do cursor e dimensões e posicionamento da janela via Win32. |
+| `DearNotes/Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
+| `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
+| `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, editor e arraste. |
+| `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, limites e preservação de arquivos inválidos. |
+| `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
 
-`App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
+`App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto WPF. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
 
-Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas.
+Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas. A geometria do Desk vive em `DeskGeometry`, permitindo testar o posicionamento sem abrir janelas, e o acesso a arquivos e telas é injetado por `INoteStore`, `IDeskPositionStore` e `IScreenService`.
 
 ## Próximas etapas
 

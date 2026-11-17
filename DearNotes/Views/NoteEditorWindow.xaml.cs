@@ -9,17 +9,24 @@ namespace DearNotes.Views
 {
     public partial class NoteEditorWindow : Window
     {
+        private const double EditorMargin = 12;
+
         private readonly string monitorDeviceName;
+
+        private readonly IScreenService screenService;
+
         private bool initialPositionApplied;
 
         public NoteEditorWindow(
             DeskViewModel viewModel,
-            DeskScreen screen)
+            DeskScreen screen,
+            IScreenService screenService)
         {
             InitializeComponent();
 
             DataContext = viewModel;
             monitorDeviceName = screen.DeviceName;
+            this.screenService = screenService;
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -28,15 +35,18 @@ namespace DearNotes.Views
 
             // Coloca a janela no monitor correto antes de exibi-la.
             DeskScreen screen =
-                DeskScreenService.FindOrPrimary(monitorDeviceName);
+                screenService.FindOrPrimary(monitorDeviceName);
 
-            Rect area = screen.WorkArea;
-            Rect bounds = DeskScreenService.GetWindowBounds(this);
+            DpiScale dpi = VisualTreeHelper.GetDpi(this);
+            Rect bounds = screenService.GetWindowBounds(this);
 
-            DeskScreenService.MoveWindow(
-                this,
-                area.Left + (area.Width - bounds.Width) / 2,
-                area.Top + (area.Height - bounds.Height) / 2);
+            Rect target = DeskGeometry.ComputeEditorBounds(
+                screen.WorkArea,
+                new Size(bounds.Width, bounds.Height),
+                dpi,
+                marginInDips: 0);
+
+            screenService.MoveWindow(this, target.Left, target.Top);
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -46,30 +56,22 @@ namespace DearNotes.Views
             initialPositionApplied = true;
 
             DeskScreen screen =
-                DeskScreenService.FindOrPrimary(monitorDeviceName);
+                screenService.FindOrPrimary(monitorDeviceName);
 
-            Rect area = screen.WorkArea;
             DpiScale dpi = VisualTreeHelper.GetDpi(this);
 
-            double marginX = 12 * dpi.DpiScaleX;
-            double marginY = 12 * dpi.DpiScaleY;
+            Rect target = DeskGeometry.ComputeEditorBounds(
+                screen.WorkArea,
+                new Size(Width, Height),
+                dpi,
+                EditorMargin);
 
-            double widthPixels = Math.Max(
-                1,
-                Math.Min(Width * dpi.DpiScaleX,
-                         area.Width - marginX * 2));
-
-            double heightPixels = Math.Max(
-                1,
-                Math.Min(Height * dpi.DpiScaleY,
-                         area.Height - marginY * 2));
-
-            DeskScreenService.SetWindowBounds(
+            screenService.SetWindowBounds(
                 this,
-                area.Left + (area.Width - widthPixels) / 2,
-                area.Top + (area.Height - heightPixels) / 2,
-                widthPixels,
-                heightPixels);
+                target.Left,
+                target.Top,
+                target.Width,
+                target.Height);
 
             Opacity = 1;
         }
