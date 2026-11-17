@@ -89,17 +89,17 @@ namespace DearNotes.Views
         {
             System.Diagnostics.Debug.WriteLine("Desk: janela carregada.");
 
-            var dpi = VisualTreeHelper.GetDpi(this);
-
-            System.Diagnostics.Debug.WriteLine($"Desk: escala inicial = {dpi.DpiScaleX * 100:0}%");
-
             DeskPosition position = positionStore.Load();
 
             currentScreen = screenService.FindOrPrimary(position.MonitorDeviceName);
 
+            System.Diagnostics.Debug.WriteLine(
+                $"Desk: monitor = {currentScreen.DeviceName}, " +
+                $"escala = {currentScreen.Dpi.DpiScaleX * 100:0}%");
+
             Rect area = currentScreen.WorkArea;
 
-            screenService.MoveWindow(
+            screenService.TryMoveWindow(
                 this,
                 area.Left,
                 area.Top);
@@ -234,7 +234,7 @@ namespace DearNotes.Views
         {
             if (currentScreen is null) return;
 
-            DpiScale dpi = VisualTreeHelper.GetDpi(this);
+            DpiScale dpi = currentScreen.Dpi;
 
             Rect bounds = screenService.GetWindowBounds(this);
 
@@ -247,12 +247,15 @@ namespace DearNotes.Views
                 verticalPosition,
                 bounds.Top);
 
-            screenService.SetWindowBounds(
-                this,
-                target.Left,
-                target.Top,
-                target.Width,
-                target.Height);
+            if (!screenService.TrySetWindowBounds(
+                    this,
+                    target.Left,
+                    target.Top,
+                    target.Width,
+                    target.Height))
+            {
+                return;
+            }
 
             currentVerticalPosition = DeskGeometry.ComputeNormalizedTop(
                 currentScreen.WorkArea,
@@ -390,7 +393,8 @@ namespace DearNotes.Views
             {
                 Rect bounds = screenService.GetWindowBounds(this);
 
-                var dpi = VisualTreeHelper.GetDpi(this);
+                DpiScale dpi = currentScreen?.Dpi ??
+                    VisualTreeHelper.GetDpi(this);
 
                 double widthPixels = Math.Max(
                     1,
@@ -400,7 +404,7 @@ namespace DearNotes.Views
                     ? bounds.Right - widthPixels
                     : bounds.Left;
 
-                screenService.SetWindowBounds(
+                screenService.TrySetWindowBounds(
                     this,
                     left,
                     bounds.Top,
@@ -514,7 +518,7 @@ namespace DearNotes.Views
 
             Rect bounds = screenService.GetWindowBounds(this);
 
-            DpiScale dpi = VisualTreeHelper.GetDpi(this);
+            DpiScale dpi = currentScreen.Dpi;
 
             positionStore.Save(new DeskPosition
             {
@@ -528,17 +532,34 @@ namespace DearNotes.Views
             });
         }
 
-        private void MoveDeskWithMouse()
+        private bool MoveDeskWithMouse()
         {
-            Point mouse = screenService.GetMousePosition();
-            Rect bounds = screenService.GetWindowBounds(this);
+            if (!TryGetMousePosition(out Point mouse)) return false;
 
-            Point position = DeskGeometry.ComputeDragPosition(
-                mouse,
-                bounds,
-                dragAnchor);
+            try
+            {
+                Rect bounds = screenService.GetWindowBounds(this);
 
-            screenService.MoveWindow(this, position.X, position.Y);
+                Point position = DeskGeometry.ComputeDragPosition(
+                    mouse,
+                    bounds,
+                    dragAnchor);
+
+                return screenService.TryMoveWindow(
+                    this,
+                    position.X,
+                    position.Y);
+            }
+            catch (Exception ex) when (
+                ex is Win32Exception ||
+                ex is InvalidOperationException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "Desk: não foi possível mover o Desk: " +
+                    ex.Message);
+
+                return false;
+            }
         }
 
         private void Pill_MouseRightButtonDown(
@@ -555,23 +576,48 @@ namespace DearNotes.Views
             viewModel.SetExpanded(false);
             CollapseImmediately();
 
-            Point mouse = screenService.GetMousePosition();
-
-            Rect bounds = screenService.GetWindowBounds(this);
-
-            dragAnchor = new Point(
-                Math.Clamp(
-                    (mouse.X - bounds.Left) / Math.Max(1, bounds.Width),
-                    0,
-                    1),
-                Math.Clamp(
-                    (mouse.Y - bounds.Top) / Math.Max(1, bounds.Height),
-                    0,
-                    1));
+            if (!TryUpdateDragAnchor())
+            {
+                isDragging = false;
+                return;
+            }
 
             if (!PillHandle.CaptureMouse())
             {
                 isDragging = false;
+            }
+        }
+
+        private bool TryUpdateDragAnchor()
+        {
+            if (!TryGetMousePosition(out Point mouse)) return false;
+
+            try
+            {
+                Rect bounds = screenService.GetWindowBounds(this);
+
+                dragAnchor = new Point(
+                    Math.Clamp(
+                        (mouse.X - bounds.Left) /
+                        Math.Max(1, bounds.Width),
+                        0,
+                        1),
+                    Math.Clamp(
+                        (mouse.Y - bounds.Top) /
+                        Math.Max(1, bounds.Height),
+                        0,
+                        1));
+
+                return true;
+            }
+            catch (Exception ex) when (
+                ex is Win32Exception ||
+                ex is InvalidOperationException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Desk: não foi possível iniciar o arraste: {ex.Message}");
+
+                return false;
             }
         }
 
@@ -585,7 +631,11 @@ namespace DearNotes.Views
                 return;
             }
 
-            MoveDeskWithMouse();
+            if (!MoveDeskWithMouse())
+            {
+                FinishPillDrag();
+                return;
+            }
 
             e.Handled = true;
         }
@@ -611,9 +661,14 @@ namespace DearNotes.Views
 
             if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
 
-            Point mouse = screenService.GetMousePosition();
+            if (!TryGetMousePosition(out Point mouse)) return;
 
-            currentScreen = screenService.FromPoint(mouse);
+            DeskScreen? nextScreen = TryFindScreen(
+                () => screenService.FromPoint(mouse));
+
+            if (nextScreen is null) return;
+
+            currentScreen = nextScreen;
 
             viewModel.SetSide(
                 DeskGeometry.IsOnRightSide(
@@ -623,6 +678,42 @@ namespace DearNotes.Views
             UpdateSideLayout();
             SnapToEdge();
             SaveDeskPosition();
+        }
+
+        private bool TryGetMousePosition(out Point mouse)
+        {
+            try
+            {
+                mouse = screenService.GetMousePosition();
+                return true;
+            }
+            catch (Win32Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "Desk: não foi possível obter a posição do cursor: " +
+                    ex.Message);
+
+                mouse = default;
+                return false;
+            }
+        }
+
+        private DeskScreen? TryFindScreen(Func<DeskScreen> findScreen)
+        {
+            try
+            {
+                return findScreen();
+            }
+            catch (Exception ex) when (
+                ex is Win32Exception ||
+                ex is InvalidOperationException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "Desk: não foi possível atualizar o monitor: " +
+                    ex.Message);
+
+                return null;
+            }
         }
 
         private void ViewModel_PropertyChanged(
@@ -696,7 +787,11 @@ namespace DearNotes.Views
 
             double verticalPosition = currentVerticalPosition;
 
-            DeskScreen nextScreen = screenService.FindOrPrimary(currentScreen.DeviceName);
+            DeskScreen? nextScreen = TryFindScreen(
+                () => screenService.FindOrPrimary(
+                    currentScreen.DeviceName));
+
+            if (nextScreen is null) return;
 
             isDragging = false;
 
@@ -735,8 +830,13 @@ namespace DearNotes.Views
                         return;
                     }
 
-                    currentScreen = screenService.FindOrPrimary(
-                        currentScreen.DeviceName);
+                    DeskScreen? nextScreen = TryFindScreen(
+                        () => screenService.FindOrPrimary(
+                            currentScreen.DeviceName));
+
+                    if (nextScreen is null) return;
+
+                    currentScreen = nextScreen;
 
                     SnapToEdge(
                         currentVerticalPosition,

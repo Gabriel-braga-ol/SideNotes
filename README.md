@@ -41,7 +41,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - `System.Text.Json` para leitura e gravação dos dados.
 - Criptografia AES-GCM e DPAPI (`System.Security.Cryptography.ProtectedData`, incluído no .NET 10 para Windows) para proteger as notas em repouso.
 - xUnit para os testes automatizados do núcleo.
-- APIs do Windows (Win32) via P/Invoke para consultar monitores e posicionar o Desk.
+- APIs do Windows (Win32) via P/Invoke para consultar monitores, DPI efetivo e posicionar o Desk.
 - Reconhecimento de DPI por monitor com `PerMonitorV2` no manifesto do aplicativo.
 
 ## Como executar
@@ -95,7 +95,7 @@ Criar uma nota limpa a busca ativa para que a nova anotação fique visível. Ao
 
 Uma nota aberta permanece no editor ao retirar o mouse. Desafixar ou excluir essa nota pela janela principal fecha o editor. Ao fechar a janela principal, as janelas do Desk e do editor também são fechadas.
 
-O posicionamento considera a área útil do **monitor escolhido**, descontando o espaço da barra de tarefas. O Desk acompanha as mudanças de escala de DPI entre telas e recalcula o encaixe quando a configuração dos monitores muda. Se o monitor utilizado for desconectado, o Desk recolhe e é reposicionado no principal. Reconectar a tela não o move automaticamente de volta.
+O posicionamento considera a área útil do **monitor escolhido**, descontando o espaço da barra de tarefas. A escala de DPI usada no cálculo vem do próprio monitor de destino, inclusive antes de a janela ser movida. O Desk acompanha as mudanças de escala de DPI entre telas e recalcula o encaixe quando a configuração dos monitores muda. Se o monitor utilizado for desconectado, o Desk recolhe e é reposicionado no principal. Reconectar a tela não o move automaticamente de volta.
 
 A recuperação automática após uma desconexão não substitui a preferência salva; um novo arraste salva a nova posição.
 
@@ -193,7 +193,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes.Core/Services/IDeskPositionStore.cs` e `DeskPositionStore.cs` | Contrato e implementação da leitura, validação e gravação de `desk_position.json`. |
 | `DearNotes.Core/Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
 | `DearNotes/Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
-| `DearNotes/Services/IScreenService.cs` e `DeskScreenService.cs` | Contrato e implementação da consulta dos monitores, área útil, posição do cursor e dimensões e posicionamento da janela via Win32. |
+| `DearNotes/Services/IScreenService.cs` e `DeskScreenService.cs` | Contrato e implementação da consulta dos monitores, área útil, DPI efetivo, posição do cursor e dimensões e posicionamento tolerante a falhas da janela via Win32. |
 | `DearNotes/Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
 | `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
 | `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, editor e arraste. |
@@ -225,6 +225,7 @@ A criptografia também é injetada: o Core define `INoteEncryption` e `IKeyProvi
 - [x] Gravar as notas em segundo plano sem bloquear a interface.
 - [x] Versionar o formato de `notes.json` e migrar automaticamente o formato antigo.
 - [x] Cifrar as notas em repouso com chave protegida pelo DPAPI.
+- [x] Consultar o DPI efetivo de cada monitor e sobreviver a falhas de posicionamento.
 - [ ] Refinar o visual do leque do Desk.
 - [ ] Suavizar as animações de abertura e recolhimento.
 

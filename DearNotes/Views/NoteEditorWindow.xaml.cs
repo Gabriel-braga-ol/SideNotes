@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using DearNotes.Services;
 using DearNotes.ViewModels;
 
@@ -37,7 +36,7 @@ namespace DearNotes.Views
             DeskScreen screen =
                 screenService.FindOrPrimary(monitorDeviceName);
 
-            DpiScale dpi = VisualTreeHelper.GetDpi(this);
+            DpiScale dpi = screen.Dpi;
             Rect bounds = screenService.GetWindowBounds(this);
 
             Rect target = DeskGeometry.ComputeEditorBounds(
@@ -46,7 +45,7 @@ namespace DearNotes.Views
                 dpi,
                 marginInDips: 0);
 
-            screenService.MoveWindow(this, target.Left, target.Top);
+            screenService.TryMoveWindow(this, target.Left, target.Top);
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -58,7 +57,7 @@ namespace DearNotes.Views
             DeskScreen screen =
                 screenService.FindOrPrimary(monitorDeviceName);
 
-            DpiScale dpi = VisualTreeHelper.GetDpi(this);
+            DpiScale dpi = screen.Dpi;
 
             Rect target = DeskGeometry.ComputeEditorBounds(
                 screen.WorkArea,
@@ -66,7 +65,7 @@ namespace DearNotes.Views
                 dpi,
                 EditorMargin);
 
-            screenService.SetWindowBounds(
+            screenService.TrySetWindowBounds(
                 this,
                 target.Left,
                 target.Top,

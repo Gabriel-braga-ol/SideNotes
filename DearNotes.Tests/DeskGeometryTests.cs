@@ -118,6 +118,47 @@ namespace DearNotes.Tests
             Assert.Equal(8, bounds.Top);
         }
 
+        [Fact]
+        public void ComputeSnapBounds_LimitsWidthToWorkArea()
+        {
+            var workArea = new Rect(0, 0, 100, 300);
+
+            Rect bounds = DeskGeometry.ComputeSnapBounds(
+                workArea,
+                new DpiScale(2, 2),
+                logicalWidth: 256,
+                logicalHeight: 200,
+                isOnRight: true,
+                verticalPosition: 0.5,
+                currentTopPixels: 0);
+
+            Assert.Equal(68, bounds.Width);
+            Assert.Equal(16, bounds.Left);
+            Assert.True(bounds.Right <= workArea.Right);
+            Assert.True(bounds.Bottom <= workArea.Bottom);
+        }
+
+        [Fact]
+        public void ComputeSnapBounds_WhenMarginsExceedWorkArea_StaysInside()
+        {
+            var workArea = new Rect(0, 0, 20, 60);
+
+            Rect bounds = DeskGeometry.ComputeSnapBounds(
+                workArea,
+                new DpiScale(2, 2),
+                logicalWidth: 256,
+                logicalHeight: 100,
+                isOnRight: true,
+                verticalPosition: 0.5,
+                currentTopPixels: 0);
+
+            Assert.Equal(1, bounds.Width);
+            Assert.True(bounds.Left >= workArea.Left);
+            Assert.True(bounds.Right <= workArea.Right);
+            Assert.True(bounds.Top >= workArea.Top);
+            Assert.True(bounds.Bottom <= workArea.Bottom);
+        }
+
         [Theory]
         [InlineData(140, 800, 0.5)]
         [InlineData(8, 800, 0)]
