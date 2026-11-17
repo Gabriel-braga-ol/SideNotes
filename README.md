@@ -13,7 +13,8 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Lista com título, prévia do conteúdo e destaque da nota selecionada.
 - Busca por título ou conteúdo, sem diferenciar maiúsculas e minúsculas.
 - Salvamento automático após um segundo sem digitar, em segundo plano: apenas o snapshot mais recente é enfileirado, sem bloquear a interface, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
-- Persistência local em JSON com formato versionado, identificador estável e datas de criação e atualização por nota.
+- Persistência local em JSON cifrado com formato versionado, identificador estável e datas de criação e atualização por nota.
+- Criptografia em repouso com AES-GCM de 256 bits; a chave aleatória é protegida pelo DPAPI no escopo do usuário atual do Windows.
 - Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
 - Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
@@ -38,6 +39,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Gravação das notas em segundo plano a partir de snapshots imutáveis.
 - Mutex nomeado para garantir instância única do aplicativo.
 - `System.Text.Json` para leitura e gravação dos dados.
+- Criptografia AES-GCM e DPAPI (`System.Security.Cryptography.ProtectedData`, incluído no .NET 10 para Windows) para proteger as notas em repouso.
 - xUnit para os testes automatizados do núcleo.
 - APIs do Windows (Win32) via P/Invoke para consultar monitores e posicionar o Desk.
 - Reconhecimento de DPI por monitor com `PerMonitorV2` no manifesto do aplicativo.
@@ -67,7 +69,7 @@ dotnet run --project ".\DearNotes\DearNotes.csproj"
 
 ### Testes
 
-Os testes automatizados cobrem a geometria do Desk e a leitura e gravação dos arquivos JSON. Execute na raiz do repositório:
+Os testes automatizados cobrem a geometria do Desk, a criptografia, a leitura e a gravação dos arquivos JSON. Execute na raiz do repositório:
 
 ```powershell
 dotnet test ".\DearNotes.slnx"
@@ -105,7 +107,22 @@ As notas são armazenadas neste caminho do usuário do Windows:
 %LocalAppData%\DearNotes\notes.json
 ```
 
-O arquivo usa um documento versionado. A versão atual é a **1**:
+O arquivo é um envelope JSON com o documento de notas **cifrado**. O envelope identifica o esquema de proteção e a versão do formato:
+
+```json
+{
+  "Protection": "dpapi-aes-gcm",
+  "FormatVersion": 1,
+  "KeyId": "A1B2C3D4E5F60708",
+  "Nonce": "…",
+  "Tag": "…",
+  "Ciphertext": "…"
+}
+```
+
+A chave de 256 bits fica em `%LocalAppData%\DearNotes\notes.key`, protegida pelo DPAPI no escopo do usuário atual. O AES-GCM usa um nonce aleatório a cada gravação e uma tag de autenticação que detecta alterações no arquivo. Se a chave não corresponder ao envelope, ou se o conteúdo tiver sido adulterado, o aplicativo informa a falha e encerra **sem sobrescrever** as notas existentes.
+
+Depois de decifrado, o conteúdo é o documento versionado. A versão atual é a **1**:
 
 ```json
 {
@@ -124,9 +141,13 @@ O arquivo usa um documento versionado. A versão atual é a **1**:
 }
 ```
 
-Arquivos antigos que contêm apenas a lista de notas (sem `SchemaVersion`) são migrados automaticamente na leitura: o aplicativo gera um identificador para cada nota e usa a data atual como criação e atualização. A conversão é gravada no próximo salvamento. Versões de formato mais novas que a suportada são tratadas como dados inválidos, com cópia de segurança preservada.
+Arquivos antigos que contêm apenas a lista de notas (sem `SchemaVersion`) ou o documento versionado em texto puro continuam sendo lidos. O formato legado é migrado automaticamente na leitura: o aplicativo gera um identificador para cada nota e usa a data atual como criação e atualização. Todo conteúdo é gravado cifrado no próximo salvamento. Versões de formato mais novas que a suportada são tratadas como dados inválidos, com cópia de segurança preservada.
 
-Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substitui o arquivo principal. O autosave grava em segundo plano uma cópia das notas e, ao fechar a janela principal, aguarda a fila terminar antes de encerrar. Ao detectar JSON ou dados inválidos, preserva uma cópia chamada `notes-invalid-<identificador>.json` e informa sua localização.
+Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substitui o arquivo principal. O autosave grava em segundo plano uma cópia das notas e, ao fechar a janela principal, aguarda a fila terminar antes de encerrar. Ao detectar JSON ou dados inválidos, preserva uma cópia chamada `notes-invalid-<identificador>.json` e informa sua localização. São mantidas no máximo **5** cópias inválidas; as mais antigas são removidas. A cópia preserva os bytes originais: arquivos cifrados continuam cifrados e arquivos legados em texto puro continuam em texto puro.
+
+> [!IMPORTANT]
+> Ao copiar as notas manualmente, copie `notes.json` e `notes.key` juntos. Sem a chave, o arquivo cifrado não pode ser recuperado. A recriação do perfil do Windows ou uma reinstalação do sistema também podem invalidar a proteção DPAPI da chave.
+
 
 A indicação de quais notas estão fixadas no Desk também é salva em `notes.json`. O identificador do monitor, o lado e a posição vertical da pílula ficam em um arquivo separado:
 
@@ -152,7 +173,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `DearNotes/App.xaml` e `DearNotes/App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
+| `DearNotes/App.xaml` e `DearNotes/App.xaml.cs` | Inicialização da criptografia, do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
 | `DearNotes.Core/Models/Note.cs` | Dados da nota, incluindo identificador, datas, fixação no Desk, e notificações de alteração. |
 | `DearNotes.Core/Models/NotesDocument.cs` | Documento versionado que envolve a lista de notas em `notes.json`. |
 | `DearNotes.Core/Models/NoteDocument.cs` | Representação persistida de uma nota, com identificador, conteúdo, cor, fixação e datas. |
@@ -165,7 +186,10 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
 | `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, centralização do editor e posição do arraste. |
 | `DearNotes.Core/Services/NotesAutoSaver.cs` | Fila de gravação em segundo plano: mantém uma escrita por vez e substitui o snapshot pendente pelo mais recente. |
-| `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação, migração do formato antigo e gravação do arquivo JSON das notas. |
+| `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação, migração do formato antigo, criptografia do envelope e gravação do arquivo de notas. |
+| `DearNotes.Core/Services/INoteEncryption.cs`, `IKeyProvider.cs`, `EncryptedNotePayload.cs` e `AesGcmNoteEncryption.cs` | Contratos de criptografia e de fornecimento da chave, payload cifrado e implementação AES-GCM com nonce, tag e identificador da chave. |
+| `DearNotes.Core/Services/ProtectedNotesFile.cs` | Envelope JSON interno que envolve o documento cifrado de `notes.json`. |
+| `DearNotes/Services/DpapiKeyProvider.cs` | Criação e leitura de `notes.key`, com a chave protegida pelo DPAPI no escopo do usuário atual. |
 | `DearNotes.Core/Services/IDeskPositionStore.cs` e `DeskPositionStore.cs` | Contrato e implementação da leitura, validação e gravação de `desk_position.json`. |
 | `DearNotes.Core/Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
 | `DearNotes/Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
@@ -173,7 +197,9 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
 | `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
 | `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, editor e arraste. |
-| `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, limites e preservação de arquivos inválidos. |
+| `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, migração, criptografia, limites e preservação de arquivos inválidos. |
+| `DearNotes.Tests/AesGcmNoteEncryptionTests.cs` | Ida e volta da criptografia, nonces únicos, adulteração de conteúdo e tag, chave incorreta e tamanhos inválidos. |
+| `DearNotes.Tests/FixedKeyProvider.cs` | Chave fixa usada apenas nos testes para tornar a criptografia determinística e isolada do DPAPI. |
 | `DearNotes.Tests/NotesAutoSaverTests.cs` | Gravação em segundo plano, coalescência de snapshots, falhas e gravação síncrona de emergência. |
 | `DearNotes.Tests/NoteTests.cs` | Identidade, datas e independência das cópias usadas pelo autosave. |
 | `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
@@ -182,6 +208,8 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 `App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto WPF. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
 
 Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas. A geometria do Desk vive em `DeskGeometry`, permitindo testar o posicionamento sem abrir janelas, e o acesso a arquivos e telas é injetado por `INoteStore`, `IDeskPositionStore` e `IScreenService`. O `NotesAutoSaver` recebe cópias das notas, executa a gravação em segundo plano e descarta snapshots intermediários quando já existe um mais recente; ao fechar, a janela principal aguarda a fila terminar antes de encerrar.
+
+A criptografia também é injetada: o Core define `INoteEncryption` e `IKeyProvider`, `AesGcmNoteEncryption` implementa o envelope AES-GCM e o aplicativo WPF fornece a chave por meio de `DpapiKeyProvider`. Assim, os testes usam uma chave fixa e não dependem do DPAPI nem do perfil do Windows. A chave nunca é gravada em texto puro e é zerada da memória após cada operação de criptografia ou descriptografia.
 
 ## Próximas etapas
 
@@ -196,6 +224,7 @@ Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos 
 - [x] Salvar as preferências do Desk, incluindo monitor, posição e notas escolhidas.
 - [x] Gravar as notas em segundo plano sem bloquear a interface.
 - [x] Versionar o formato de `notes.json` e migrar automaticamente o formato antigo.
+- [x] Cifrar as notas em repouso com chave protegida pelo DPAPI.
 - [ ] Refinar o visual do leque do Desk.
 - [ ] Suavizar as animações de abertura e recolhimento.
 

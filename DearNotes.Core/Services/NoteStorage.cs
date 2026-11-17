@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DearNotes.Models;
@@ -12,6 +14,8 @@ namespace DearNotes.Services
     {
         private const string ColorPattern = @"\A#[0-9a-fA-F]{6}\z";
 
+        private const int MaxInvalidBackups = 5;
+
         private static readonly JsonSerializerOptions SerializerOptions = new()
         {
             WriteIndented = true
@@ -21,16 +25,22 @@ namespace DearNotes.Services
 
         private readonly string filePath;
 
-        public NoteStorage()
-            : this(AppPaths.NotesFilePath)
+        private readonly INoteEncryption encryption;
+
+        public NoteStorage(INoteEncryption encryption)
+            : this(AppPaths.NotesFilePath, encryption)
         {
         }
 
-        public NoteStorage(string filePath)
+        public NoteStorage(
+            string filePath,
+            INoteEncryption encryption)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+            ArgumentNullException.ThrowIfNull(encryption);
 
             this.filePath = Path.GetFullPath(filePath);
+            this.encryption = encryption;
 
             folderPath = Path.GetDirectoryName(this.filePath)
                 ?? throw new ArgumentException(
@@ -50,8 +60,33 @@ namespace DearNotes.Services
                     .ToList()
             };
 
-            string json = JsonSerializer.Serialize(
+            byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(
                 document,
+                SerializerOptions);
+
+            EncryptedNotePayload payload;
+
+            try
+            {
+                payload = encryption.Encrypt(plaintext);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
+
+            var protectedFile = new ProtectedNotesFile
+            {
+                Protection = ProtectedNotesFile.ProtectionName,
+                FormatVersion = ProtectedNotesFile.CurrentFormatVersion,
+                KeyId = payload.KeyId,
+                Nonce = Convert.ToBase64String(payload.Nonce),
+                Tag = Convert.ToBase64String(payload.Tag),
+                Ciphertext = Convert.ToBase64String(payload.Ciphertext)
+            };
+
+            string json = JsonSerializer.Serialize(
+                protectedFile,
                 SerializerOptions);
 
             string temporaryPath = filePath + ".tmp";
@@ -99,17 +134,83 @@ namespace DearNotes.Services
             }
         }
 
-        private static NotesDocument ReadDocument(string json)
+        private NotesDocument ReadDocument(string json)
         {
             using JsonDocument parsed = JsonDocument.Parse(json);
 
             return parsed.RootElement.ValueKind switch
             {
                 JsonValueKind.Array => ReadLegacyDocument(parsed.RootElement),
-                JsonValueKind.Object => ReadCurrentDocument(parsed.RootElement),
+                JsonValueKind.Object => ReadDocumentObject(parsed.RootElement),
                 _ => throw new JsonException(
                     "O arquivo não contém um documento de notas.")
             };
+        }
+
+        private NotesDocument ReadDocumentObject(JsonElement root)
+        {
+            if (root.TryGetProperty("Protection", out _))
+            {
+                return ReadProtectedDocument(root);
+            }
+
+            return ReadCurrentDocument(root);
+        }
+
+        private NotesDocument ReadProtectedDocument(JsonElement root)
+        {
+            ProtectedNotesFile? file =
+                root.Deserialize<ProtectedNotesFile>();
+
+            if (file is null ||
+                file.Protection != ProtectedNotesFile.ProtectionName ||
+                file.FormatVersion != ProtectedNotesFile.CurrentFormatVersion)
+            {
+                throw new JsonException(
+                    "O envelope de criptografia não é suportado.");
+            }
+
+            EncryptedNotePayload payload = CreatePayload(file);
+
+            byte[] plaintext = encryption.Decrypt(payload);
+
+            try
+            {
+                using JsonDocument inner = JsonDocument.Parse(plaintext);
+
+                return ReadCurrentDocument(inner.RootElement);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
+        }
+
+        private static EncryptedNotePayload CreatePayload(
+            ProtectedNotesFile file)
+        {
+            if (string.IsNullOrWhiteSpace(file.KeyId) ||
+                file.Nonce is null ||
+                file.Tag is null ||
+                file.Ciphertext is null)
+            {
+                throw new JsonException(
+                    "O envelope de criptografia está incompleto.");
+            }
+
+            try
+            {
+                return new EncryptedNotePayload(
+                    file.KeyId,
+                    Convert.FromBase64String(file.Nonce),
+                    Convert.FromBase64String(file.Tag),
+                    Convert.FromBase64String(file.Ciphertext));
+            }
+            catch (FormatException)
+            {
+                throw new JsonException(
+                    "O envelope de criptografia está inválido.");
+            }
         }
 
         // Versões anteriores gravavam apenas a lista de notas, sem metadados.
@@ -243,6 +344,8 @@ namespace DearNotes.Services
 
             File.Copy(filePath, backupPath);
 
+            PruneInvalidBackups();
+
             warningMessage =
                 "Não foi possível carregar as notas porque o arquivo " +
                 "contém dados inválidos.\n\n" +
@@ -250,6 +353,30 @@ namespace DearNotes.Services
                 backupPath;
 
             return new List<Note>();
+        }
+
+        private void PruneInvalidBackups()
+        {
+            try
+            {
+                FileInfo[] expiredBackups = new DirectoryInfo(folderPath)
+                    .GetFiles("notes-invalid-*.json")
+                    .OrderByDescending(file => file.LastWriteTimeUtc)
+                    .Skip(MaxInvalidBackups)
+                    .ToArray();
+
+                foreach (FileInfo backup in expiredBackups)
+                {
+                    backup.Delete();
+                }
+            }
+            catch (Exception ex) when (
+                ex is IOException ||
+                ex is UnauthorizedAccessException)
+            {
+                Debug.WriteLine(
+                    $"Não foi possível remover backups antigos: {ex.Message}");
+            }
         }
     }
 }
