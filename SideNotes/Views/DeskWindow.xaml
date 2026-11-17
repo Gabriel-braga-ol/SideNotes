@@ -20,55 +20,6 @@
         SnapsToDevicePixels="True">
 
     <Grid x:Name="DeskRoot">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Button Grid.Row="0"
-                        Width="28"
-                        Height="28"
-                        HorizontalAlignment="Right"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Foreground="#31544B"
-                        Cursor="Hand"
-                        AutomationProperties.Name="Fechar nota no Desk"/>
-
-                <TextBox Grid.Row="1"
-                         Text="{Binding Title,
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="19"
-                         FontWeight="SemiBold"
-                         Foreground="#242A28"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         TextWrapping="Wrap"
-                         MaxHeight="90"
-                         VerticalScrollBarVisibility="Hidden"
-                         Margin="0,4,0,12"
-                         AutomationProperties.Name="Título da nota"/>
-
-                <TextBox Grid.Row="2"
-                         Text="{Binding Content,
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="14"
-                         Foreground="#343B37"
-                         Background="Transparent"
-                         Padding="0"
-                         BorderThickness="0"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         VerticalContentAlignment="Top"
-                         VerticalScrollBarVisibility="Hidden"
-                         HorizontalScrollBarVisibility="Disabled"
-                         AutomationProperties.Name="Conteúdo da nota"/> 
-            </Grid>
-
         <!-- Abas das notas fixadas -->
         <ItemsControl x:Name="NoteTabs"
                       ItemsSource="{Binding DeskNotes}"
