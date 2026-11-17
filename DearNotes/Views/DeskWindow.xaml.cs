@@ -1,16 +1,16 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
-using DearNotes.ViewModels;
-using System.Windows.Media.Animation;
-using System.Windows.Controls;
+using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using DearNotes.Models;
 using DearNotes.Services;
-using System.ComponentModel;
-using System.Windows.Interop;
+using DearNotes.ViewModels;
 
 namespace DearNotes.Views
 {
@@ -112,7 +112,7 @@ namespace DearNotes.Views
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
-            collapseTimer.Stop();     
+            collapseTimer.Stop();
         }
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
@@ -209,7 +209,7 @@ namespace DearNotes.Views
         {
             e.Handled = true;
 
-            if (isDragging) return;    
+            if (isDragging) return;
 
             collapseTimer.Stop();
             viewModel.SetExpanded(true);
@@ -225,7 +225,7 @@ namespace DearNotes.Views
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
 
-            NoteTabs.Margin = new Thickness(0); 
+            NoteTabs.Margin = new Thickness(0);
 
             PositionNoteCards();
         }
@@ -292,7 +292,7 @@ namespace DearNotes.Views
             MouseButtonEventArgs e)
         {
             if (sender is not FrameworkElement element ||
-                element.DataContext is not Note note) return;   
+                element.DataContext is not Note note) return;
 
             e.Handled = true;
             collapseTimer.Stop();
@@ -503,7 +503,7 @@ namespace DearNotes.Views
 
                 double offset = count <= 1
                     ? 0
-                    : progress * maxOffset; 
+                    : progress * maxOffset;
 
                 container.Tag = angle * direction;
 
@@ -698,7 +698,7 @@ namespace DearNotes.Views
             }
         }
 
-        private DeskScreen? TryFindScreen(Func<DeskScreen> findScreen)
+        private static DeskScreen? TryFindScreen(Func<DeskScreen> findScreen)
         {
             try
             {
@@ -723,7 +723,7 @@ namespace DearNotes.Views
             switch (e.PropertyName)
             {
                 case nameof(DeskViewModel.OpenedNote):
-                    if (viewModel.OpenedNote is null)CloseEditorWindow();
+                    if (viewModel.OpenedNote is null) CloseEditorWindow();
 
                     else ShowEditor();
 

@@ -15,7 +15,8 @@ namespace DearNotes.Services
 
         private readonly object syncRoot = new();
 
-        private readonly SemaphoreSlim writeGate = new(1, 1);
+        // Serializa as gravações entre a fila e o encerramento de emergência.
+        private readonly object writeLock = new();
 
         private readonly List<SaveWaiter> waiters = new();
 
@@ -95,9 +96,7 @@ namespace DearNotes.Services
                 version = ++latestVersion;
             }
 
-            writeGate.Wait();
-
-            try
+            lock (writeLock)
             {
                 lock (syncRoot)
                 {
@@ -112,10 +111,6 @@ namespace DearNotes.Services
                         lastSavedVersion,
                         version);
                 }
-            }
-            finally
-            {
-                writeGate.Release();
             }
         }
 
@@ -219,30 +214,27 @@ namespace DearNotes.Services
         {
             failure = null;
 
-            writeGate.Wait();
-
-            try
+            lock (writeLock)
             {
-                lock (syncRoot)
+                try
                 {
-                    if (request.Version <= lastSavedVersion) return true;
+                    lock (syncRoot)
+                    {
+                        if (request.Version <= lastSavedVersion) return true;
+                    }
+
+                    noteStore.Save(request.Notes);
+
+                    return true;
                 }
-
-                noteStore.Save(request.Notes);
-
-                return true;
-            }
-            catch (Exception ex) when (
-                ex is IOException ||
-                ex is UnauthorizedAccessException ||
-                ex is CryptographicException)
-            {
-                failure = ex;
-                return false;
-            }
-            finally
-            {
-                writeGate.Release();
+                catch (Exception ex) when (
+                    ex is IOException ||
+                    ex is UnauthorizedAccessException ||
+                    ex is CryptographicException)
+                {
+                    failure = ex;
+                    return false;
+                }
             }
         }
 

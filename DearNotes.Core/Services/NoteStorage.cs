@@ -16,7 +16,7 @@ namespace DearNotes.Services
 
         private const int MaxInvalidBackups = 5;
 
-        private static readonly JsonSerializerOptions SerializerOptions = new()
+        private static readonly JsonSerializerOptions serializerOptions = new()
         {
             WriteIndented = true
         };
@@ -62,7 +62,7 @@ namespace DearNotes.Services
 
             byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(
                 document,
-                SerializerOptions);
+                serializerOptions);
 
             EncryptedNotePayload payload;
 
@@ -87,7 +87,7 @@ namespace DearNotes.Services
 
             string json = JsonSerializer.Serialize(
                 protectedFile,
-                SerializerOptions);
+                serializerOptions);
 
             string temporaryPath = filePath + ".tmp";
 

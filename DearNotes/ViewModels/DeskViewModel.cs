@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -48,7 +48,7 @@ namespace DearNotes.ViewModels
 
         public void SetExpanded(bool expanded)
         {
-            UpdateState(openedNote, expanded && !DeskNotes.IsEmpty);        
+            UpdateState(openedNote, expanded && !DeskNotes.IsEmpty);
         }
 
         public void CloseNote(bool immediate = false)

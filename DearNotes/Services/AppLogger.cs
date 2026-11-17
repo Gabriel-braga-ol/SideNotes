@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -59,7 +60,10 @@ namespace DearNotes.Services
             string? details)
         {
             var builder = new StringBuilder();
-            builder.Append(DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss.fff zzz"));
+            builder.Append(
+                DateTimeOffset.Now.ToString(
+                    "yyyy-MM-dd HH:mm:ss.fff zzz",
+                    CultureInfo.InvariantCulture));
             builder.Append(" [").Append(level).Append("] ");
             builder.AppendLine(message);
 

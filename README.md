@@ -67,13 +67,21 @@ Na pasta raiz do repositório, que contém `DearNotes.slnx`, execute:
 dotnet run --project ".\DearNotes\DearNotes.csproj"
 ```
 
-### Testes
+### Testes e qualidade
 
 Os testes automatizados cobrem a geometria do Desk, a criptografia, a leitura e a gravação dos arquivos JSON. Execute na raiz do repositório:
 
 ```powershell
 dotnet test ".\DearNotes.slnx"
 ```
+
+O build aplica os analisadores oficiais do .NET no nível mais recente e trata qualquer aviso como erro. A formatação é verificada com:
+
+```powershell
+dotnet format ".\DearNotes.slnx" --verify-no-changes
+```
+
+Para corrigir a formatação automaticamente, execute o mesmo comando sem `--verify-no-changes`. A pipeline em `.github/workflows/ci.yml` roda restauração, verificação de formatação, build e testes em `windows-latest` a cada push e pull request.
 
 ## Como usar
 
@@ -204,6 +212,9 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes.Tests/NoteTests.cs` | Identidade, datas e independência das cópias usadas pelo autosave. |
 | `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
+| `.editorconfig` e `Directory.Build.props` | Estilo de código compartilhado, analisadores no nível mais recente e avisos tratados como erro. |
+| `.gitattributes` | Normalização de fim de linha entre o índice e a cópia de trabalho no Windows. |
+| `.github/workflows/ci.yml` | Pipeline de integração contínua: formatação, build e testes em `windows-latest`. |
 
 `App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto WPF. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
 

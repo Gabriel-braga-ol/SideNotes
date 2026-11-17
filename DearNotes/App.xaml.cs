@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
@@ -11,7 +11,7 @@ using DearNotes.Views;
 
 namespace DearNotes
 {
-    public partial class App : Application
+    public partial class App : Application, IDisposable
     {
         private const string SingleInstanceMutexName =
             @"Local\DearNotes.SingleInstance";
@@ -215,7 +215,15 @@ namespace DearNotes
             AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
             TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
+            Dispose();
+
+            base.OnExit(e);
+        }
+
+        public void Dispose()
+        {
             notesRepository?.Dispose();
+            notesRepository = null;
 
             if (singleInstanceMutex is not null)
             {
@@ -224,7 +232,7 @@ namespace DearNotes
                 singleInstanceMutex = null;
             }
 
-            base.OnExit(e);
+            GC.SuppressFinalize(this);
         }
     }
 }

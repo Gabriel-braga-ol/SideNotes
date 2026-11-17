@@ -9,7 +9,7 @@ namespace DearNotes.Tests
 {
     public sealed class NotesAutoSaverTests
     {
-        private static readonly TimeSpan TestTimeout =
+        private static readonly TimeSpan testTimeout =
             TimeSpan.FromSeconds(5);
 
         [Fact]
@@ -20,7 +20,7 @@ namespace DearNotes.Tests
 
             bool saved = await saver
                 .FlushAsync(CreateNotes("Nota"))
-                .WaitAsync(TestTimeout);
+                .WaitAsync(testTimeout);
 
             Assert.True(saved);
             Assert.Single(store.Saved);
@@ -43,7 +43,7 @@ namespace DearNotes.Tests
 
             bool saved = await saver
                 .FlushAsync(CreateNotes("Nota"))
-                .WaitAsync(TestTimeout);
+                .WaitAsync(testTimeout);
 
             Assert.False(saved);
             Assert.IsType<IOException>(reportedFailure);
@@ -61,7 +61,7 @@ namespace DearNotes.Tests
 
             saver.Enqueue(CreateNotes("A"));
 
-            await store.FirstSaveStarted.WaitAsync(TestTimeout);
+            await store.FirstSaveStarted.WaitAsync(testTimeout);
 
             saver.Enqueue(CreateNotes("B"));
             saver.Enqueue(CreateNotes("C"));
@@ -70,11 +70,11 @@ namespace DearNotes.Tests
 
             bool saved = await saver
                 .FlushAsync(CreateNotes("C"))
-                .WaitAsync(TestTimeout);
+                .WaitAsync(testTimeout);
 
             Assert.True(saved);
 
-            IReadOnlyList<IReadOnlyList<Note>> writes = store.Saved;
+            IReadOnlyList<Note>[] writes = store.Saved;
 
             Assert.Equal("A", writes[0][0].Title);
             Assert.Equal("C", writes[^1][0].Title);
@@ -95,7 +95,7 @@ namespace DearNotes.Tests
 
             saver.Enqueue(CreateNotes("Antiga"));
 
-            await store.FirstSaveStarted.WaitAsync(TestTimeout);
+            await store.FirstSaveStarted.WaitAsync(testTimeout);
 
             Task saveNow = Task.Run(
                 () => saver.SaveNow(CreateNotes("Recente")));
@@ -104,14 +104,14 @@ namespace DearNotes.Tests
 
             store.ReleaseFirstSave();
 
-            await saveNow.WaitAsync(TestTimeout);
+            await saveNow.WaitAsync(testTimeout);
 
-            Assert.Equal(2, store.Saved.Count);
+            Assert.Equal(2, store.Saved.Length);
             Assert.Equal("Antiga", store.Saved[0][0].Title);
             Assert.Equal("Recente", store.Saved[1][0].Title);
         }
 
-        private static IReadOnlyList<Note> CreateNotes(string title)
+        private static List<Note> CreateNotes(string title)
         {
             return new List<Note>
             {
@@ -137,7 +137,7 @@ namespace DearNotes.Tests
 
             public Task FirstSaveStarted => firstSaveStarted.Task;
 
-            public IReadOnlyList<IReadOnlyList<Note>> Saved
+            public IReadOnlyList<Note>[] Saved
             {
                 get
                 {

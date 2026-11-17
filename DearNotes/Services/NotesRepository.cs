@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -23,13 +23,13 @@ namespace DearNotes.Services
             "O aplicativo tentará salvar novamente em instantes; " +
             "pressione Ctrl + S para tentar agora.";
 
-        private static readonly TimeSpan AutoSaveDelay =
+        private static readonly TimeSpan autoSaveDelay =
             TimeSpan.FromSeconds(1);
 
-        private static readonly TimeSpan MaxRetryDelay =
+        private static readonly TimeSpan maxRetryDelay =
             TimeSpan.FromSeconds(30);
 
-        private static readonly string[] NoteColors =
+        private static readonly string[] noteColors =
         {
             "#B8E6D0",
             "#F7D794",
@@ -46,7 +46,7 @@ namespace DearNotes.Services
 
         private readonly DispatcherTimer autoSaveTimer = new()
         {
-            Interval = AutoSaveDelay
+            Interval = autoSaveDelay
         };
 
         private bool hasUnsavedChanges;
@@ -57,7 +57,7 @@ namespace DearNotes.Services
 
         private int consecutiveFailures;
 
-        private TimeSpan retryDelay = AutoSaveDelay;
+        private TimeSpan retryDelay = autoSaveDelay;
 
         public ObservableCollection<Note> Notes { get; }
 
@@ -90,7 +90,7 @@ namespace DearNotes.Services
             {
                 Title = $"Nova nota {Notes.Count + 1}",
                 Content = string.Empty,
-                Color = NoteColors[Notes.Count % NoteColors.Length]
+                Color = noteColors[Notes.Count % noteColors.Length]
             };
 
             Notes.Add(note);
@@ -263,7 +263,7 @@ namespace DearNotes.Services
             if (!hasUnsavedChanges) return;
 
             autoSaveTimer.Stop();
-            autoSaveTimer.Interval = AutoSaveDelay;
+            autoSaveTimer.Interval = autoSaveDelay;
             autoSaveTimer.Start();
         }
 
@@ -307,8 +307,8 @@ namespace DearNotes.Services
             int exponent = Math.Min(consecutiveFailures - 1, 5);
 
             double delaySeconds = Math.Min(
-                AutoSaveDelay.TotalSeconds * Math.Pow(2, exponent),
-                MaxRetryDelay.TotalSeconds);
+                autoSaveDelay.TotalSeconds * Math.Pow(2, exponent),
+                maxRetryDelay.TotalSeconds);
 
             retryDelay = TimeSpan.FromSeconds(delaySeconds);
 
@@ -321,9 +321,9 @@ namespace DearNotes.Services
         {
             consecutiveFailures = 0;
             failureReported = false;
-            retryDelay = AutoSaveDelay;
+            retryDelay = autoSaveDelay;
 
-            autoSaveTimer.Interval = AutoSaveDelay;
+            autoSaveTimer.Interval = autoSaveDelay;
         }
 
         public void StopAutoSave()
