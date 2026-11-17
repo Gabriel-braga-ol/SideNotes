@@ -4,11 +4,7 @@ Aplicativo de notas para Windows desenvolvido em **C# com WPF**, para organizar 
 
 O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces desktop, binding de dados, separação de responsabilidades e persistência local.
 
-> **Em desenvolvimento:** os modos Janela e Desk compartilham as mesmas notas e o salvamento automático. O Desk permite fixar notas, visualizar prévias e editar pela lateral da tela. O visual do leque e a suavidade das animações ainda serão refinados.
-
-## Interface atual
-
-![Interface do SideNotes com lista de notas, busca e editor](docs/images/sidenotes.png)
+> **Em desenvolvimento:** os modos Janela e Desk compartilham as mesmas notas e o salvamento automático. O Desk permite fixar notas, visualizar prévias e abrir o editor em uma janela própria. O visual do leque e a suavidade das animações ainda serão refinados.
 
 ## Funcionalidades
 
@@ -23,7 +19,8 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Avisos de falha de gravação e confirmação antes de fechar quando não é possível salvar.
 - Fixação de até cinco notas no Desk, compartilhadas com o modo Janela.
 - Pílula lateral com abertura do leque por clique e prévias ao passar o mouse nas abas.
-- Edição no Desk independente da seleção na janela principal, com salvamento automático.
+- Editor do Desk em janela própria, com salvamento automático independente da seleção na janela principal.
+- Janela do editor aberta no mesmo monitor do Desk, arrastável pela barra superior e fechada junto com o Desk.
 - Arraste da pílula com o botão direito entre monitores, encaixe nas laterais e restauração do monitor e da posição ao iniciar.
 - Recuperação do Desk no monitor principal quando a tela utilizada é desconectada.
 - Adaptação do tamanho e do posicionamento do Desk entre monitores com escalas de DPI diferentes.
@@ -75,12 +72,12 @@ Criar uma nota limpa a busca ativa para que a nova anotação fique visível. Ao
 
 1. Selecione uma nota na janela principal e use a ação de fixar no Desk. É possível manter até cinco notas fixadas.
 2. Clique com o botão esquerdo na pílula lateral para abrir o leque. Apenas passar o mouse na pílula não abre as notas.
-3. Passe o mouse sobre uma aba para visualizar a prévia e clique nela para abrir o editor.
-4. Edite o título e o conteúdo. As alterações são salvas automaticamente, mesmo quando outra nota está selecionada na janela principal.
+3. Passe o mouse sobre uma aba para visualizar a prévia e clique nela para abrir a janela do editor.
+4. Edite o título e o conteúdo. A janela abre centralizada no mesmo monitor do Desk, pode ser arrastada pela barra superior e salva automaticamente, mesmo quando outra nota está selecionada na janela principal.
 5. Use o botão **✕** para fechar o editor. Sem uma nota aberta, o leque recolhe após uma pequena pausa ao retirar o mouse.
 6. Com a pílula recolhida, mantenha o botão direito pressionado e arraste para ajustar a altura, mudar de lado ou levar o Desk para outro monitor. Ao soltar, ele se encaixa na lateral da tela onde está o cursor e salva o monitor e a posição.
 
-Uma nota aberta permanece no editor ao retirar o mouse. Desafixar ou excluir essa nota pela janela principal fecha seu editor no Desk. Ao fechar a janela principal, a janela do Desk também é fechada.
+Uma nota aberta permanece no editor ao retirar o mouse. Desafixar ou excluir essa nota pela janela principal fecha o editor. Ao fechar a janela principal, as janelas do Desk e do editor também são fechadas.
 
 O posicionamento considera a área útil do **monitor escolhido**, descontando o espaço da barra de tarefas. O Desk acompanha as mudanças de escala de DPI entre telas e recalcula o encaixe quando a configuração dos monitores muda. Se o monitor utilizado for desconectado, o Desk recolhe e é reposicionado no principal. Reconectar a tela não o move automaticamente de volta.
 
@@ -117,17 +114,19 @@ O projeto separa o modelo de dados, a interface, o estado da aplicação e o arm
 | `ViewModels/DeskViewModel.cs` | Visão das notas fixadas, estado do Desk e transições de abertura, fechamento, expansão e mudança de lado. |
 | `Views/MainWindow.xaml` | Layout, estilos e bindings da interface. |
 | `Views/MainWindow.xaml.cs` | Interações visuais, foco, atalhos e apresentação de avisos. |
-| `Views/DeskWindow.xaml` e `Views/DeskWindow.xaml.cs` | Interface do Desk, eventos de mouse, arraste, animações, posicionamento e reação a mudanças de monitores e DPI. |
+| `Views/DeskWindow.xaml` e `Views/DeskWindow.xaml.cs` | Pílula lateral, leque das notas fixadas, eventos de mouse, arraste, animações, posicionamento e reação a mudanças de monitores e DPI. |
+| `Views/NoteEditorWindow.xaml` e `Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
 | `Services/NotesRepository.cs` | Coleção compartilhada, acompanhamento das alterações, autosave e comunicação de falhas de salvamento. |
 | `Services/NoteStorage.cs` | Leitura, validação e gravação do arquivo JSON das notas. |
 | `Services/DeskPositionStore.cs` | Leitura, validação e gravação de `desk_position.json`. |
 | `Services/DeskScreenService.cs` | Consulta dos monitores, área útil, posição do cursor e dimensões e posicionamento da janela via Win32. |
 | `Services/AppPaths.cs` | Centralização dos caminhos de armazenamento local. |
 | `app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
+| `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
 
-`App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto.
+`App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
 
-Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas.
+Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas.
 
 ## Próximas etapas
 
