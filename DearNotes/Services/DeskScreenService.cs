@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace SideNotes.Services
+namespace DearNotes.Services
 {
     public sealed record DeskScreen(
         string DeviceName,

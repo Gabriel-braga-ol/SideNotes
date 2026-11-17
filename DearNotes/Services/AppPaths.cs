@@ -1,14 +1,14 @@
 ﻿using System;
 using System.IO;
 
-namespace SideNotes.Services
+namespace DearNotes.Services
 {
     public static class AppPaths
     {
         public static string DataDirectory { get; } = Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),
-            "SideNotes");
+            "DearNotes");
 
         public static string NotesFilePath { get; } = Path.Combine(DataDirectory, "notes.json");
 

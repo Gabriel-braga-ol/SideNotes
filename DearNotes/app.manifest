@@ -3,7 +3,7 @@
           xmlns="urn:schemas-microsoft-com:asm.v1">
 
 	<assemblyIdentity version="1.0.0.0"
-					  name="SideNotes.app"/>
+					  name="DearNotes.app"/>
 
 	<trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
 		<security>

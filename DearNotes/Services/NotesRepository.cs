@@ -6,9 +6,9 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Threading;
-using SideNotes.Models;
+using DearNotes.Models;
 
-namespace SideNotes.Services
+namespace DearNotes.Services
 {
     // responsável pela coleção compartilhada,
     // pelo autosave e pelas solicitações de salvamento ao NoteStorage

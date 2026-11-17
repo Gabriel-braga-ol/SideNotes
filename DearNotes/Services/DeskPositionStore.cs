@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
-using SideNotes.Models;
+using DearNotes.Models;
 
-namespace SideNotes.Services
+namespace DearNotes.Services
 {
     // Assume o caminho do arquivo, a leitura, a gravação e a validação da posição carregada.
     public sealed class DeskPositionStore

@@ -3,10 +3,10 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows.Data;
-using SideNotes.Models;
-using SideNotes.Services;
+using DearNotes.Models;
+using DearNotes.Services;
 
-namespace SideNotes.ViewModels
+namespace DearNotes.ViewModels
 {
     public sealed class DeskViewModel : INotifyPropertyChanged, IDisposable
     {

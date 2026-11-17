@@ -4,16 +4,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
-using SideNotes.Services;
-using SideNotes.ViewModels;
-using SideNotes.Views;
+using DearNotes.Services;
+using DearNotes.ViewModels;
+using DearNotes.Views;
 
-namespace SideNotes
+namespace DearNotes
 {
     public partial class App : Application
     {
         private const string SingleInstanceMutexName =
-            @"Local\SideNotes.SingleInstance";
+            @"Local\DearNotes.SingleInstance";
 
         private NotesRepository? notesRepository;
 
@@ -30,13 +30,25 @@ namespace SideNotes
             if (!TryAcquireSingleInstance())
             {
                 MessageBox.Show(
-                    "O SideNotes já está aberto.\n\n" +
+                    "O DearNotes já está aberto.\n\n" +
                     "Feche a outra janela antes de iniciar uma nova instância.",
-                    "SideNotes",
+                    "DearNotes",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 
                 Shutdown();
+                return;
+            }
+
+            if (!StorageMigration.TryMigrateIfNeeded(out string? migrationError))
+            {
+                MessageBox.Show(
+                    migrationError ?? "Não foi possível migrar as notas.",
+                    "DearNotes",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Shutdown(1);
                 return;
             }
 
@@ -60,7 +72,7 @@ namespace SideNotes
                     "do arquivo inválido.\n\n" +
                     "O aplicativo será encerrado sem salvar alterações.\n\n" +
                     "Detalhes: " + ex.Message,
-                    "SideNotes",
+                    "DearNotes",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
 
@@ -135,7 +147,7 @@ namespace SideNotes
                     ? "As notas foram salvas."
                     : "Não foi possível salvar as notas.") +
                 "\n\nDetalhes em: " + AppPaths.LogFilePath,
-                "SideNotes",
+                "DearNotes",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
 

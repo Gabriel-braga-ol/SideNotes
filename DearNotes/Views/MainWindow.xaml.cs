@@ -13,10 +13,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Collections.ObjectModel;
 using System.Linq;
-using SideNotes.Models;
-using SideNotes.ViewModels;
+using DearNotes.Models;
+using DearNotes.ViewModels;
 
-namespace SideNotes.Views
+namespace DearNotes.Views
 {
     
     public partial class MainWindow : Window
@@ -102,7 +102,7 @@ namespace SideNotes.Views
                 MessageBox.Show(
                     this,
                     viewModel.LoadWarningMessage,
-                    "SideNotes");
+                    "DearNotes");
             }
         }
 
@@ -113,7 +113,7 @@ namespace SideNotes.Views
                 MessageBox.Show(
                     this,
                     message ?? "Não foi possível alterar a fixação da nota.",
-                    "SideNotes",
+                    "DearNotes",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
