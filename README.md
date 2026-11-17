@@ -18,6 +18,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
 - Avisos de falha de gravação e confirmação antes de fechar quando não é possível salvar.
 - Registro de falhas inesperadas em `%LocalAppData%\SideNotes\logs\app.log`, sem registrar o conteúdo das notas.
+- Execução em instância única: uma segunda abertura apenas informa que o aplicativo já está em execução.
 - Fixação de até cinco notas no Desk, compartilhadas com o modo Janela.
 - Pílula lateral com abertura do leque por clique e prévias ao passar o mouse nas abas.
 - Editor do Desk em janela própria, com salvamento automático independente da seleção na janela principal.
@@ -33,6 +34,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Binding de dados e `INotifyPropertyChanged`.
 - `ObservableCollection` e `ICollectionView`.
 - `DispatcherTimer` para o salvamento automático.
+- Mutex nomeado para garantir instância única do aplicativo.
 - `System.Text.Json` para leitura e gravação dos dados.
 - APIs do Windows (Win32) via P/Invoke para consultar monitores e posicionar o Desk.
 - Reconhecimento de DPI por monitor com `PerMonitorV2` no manifesto do aplicativo.
@@ -116,7 +118,7 @@ O projeto separa o modelo de dados, a interface, o estado da aplicação e o arm
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `App.xaml` e `App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
+| `App.xaml` e `App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
 | `Models/Note.cs` | Dados da nota, incluindo fixação no Desk, e notificações de alteração. |
 | `Models/DeskPosition.cs` | Identificador do monitor, lado e posição vertical do Desk. |
 | `ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |

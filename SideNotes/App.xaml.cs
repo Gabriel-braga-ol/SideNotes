@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -11,7 +12,12 @@ namespace SideNotes
 {
     public partial class App : Application
     {
+        private const string SingleInstanceMutexName =
+            @"Local\SideNotes.SingleInstance";
+
         private NotesRepository? notesRepository;
+
+        private Mutex? singleInstanceMutex;
 
         private void Application_Startup(
             object sender,
@@ -20,6 +26,19 @@ namespace SideNotes
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+            if (!TryAcquireSingleInstance())
+            {
+                MessageBox.Show(
+                    "O SideNotes já está aberto.\n\n" +
+                    "Feche a outra janela antes de iniciar uma nova instância.",
+                    "SideNotes",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                Shutdown();
+                return;
+            }
 
             MainViewModel viewModel;
             DeskViewModel deskViewModel;
@@ -57,6 +76,47 @@ namespace SideNotes
             deskWindow.Show();
 
             window.Closed += (_, _) => deskWindow.Close();
+        }
+
+        private bool TryAcquireSingleInstance()
+        {
+            try
+            {
+                singleInstanceMutex = new Mutex(
+                    initiallyOwned: false,
+                    name: SingleInstanceMutexName);
+
+                bool acquired = singleInstanceMutex.WaitOne(
+                    TimeSpan.Zero);
+
+                if (acquired) return true;
+
+                singleInstanceMutex.Dispose();
+                singleInstanceMutex = null;
+
+                return false;
+            }
+            catch (AbandonedMutexException exception)
+            {
+                // A instância anterior terminou sem liberar o Mutex; a posse passa para esta.
+                AppLogger.LogWarning(
+                    "Mutex abandonado por uma instância anterior: " +
+                    exception.Message);
+
+                return true;
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                // Sem acesso ao Mutex, o aplicativo segue sem a proteção em vez de ficar inutilizável.
+                AppLogger.LogError(
+                    "Falha ao verificar a instância única",
+                    exception);
+
+                singleInstanceMutex?.Dispose();
+                singleInstanceMutex = null;
+
+                return true;
+            }
         }
 
         private void OnDispatcherUnhandledException(
@@ -132,6 +192,13 @@ namespace SideNotes
             TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
             notesRepository?.Dispose();
+
+            if (singleInstanceMutex is not null)
+            {
+                singleInstanceMutex.ReleaseMutex();
+                singleInstanceMutex.Dispose();
+                singleInstanceMutex = null;
+            }
 
             base.OnExit(e);
         }
