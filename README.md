@@ -12,11 +12,13 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Cores atribuídas automaticamente a partir de uma paleta.
 - Lista com título, prévia do conteúdo e destaque da nota selecionada.
 - Busca por título ou conteúdo, sem diferenciar maiúsculas e minúsculas.
-- Salvamento automático após um segundo sem digitar.
+- Salvamento automático após um segundo sem digitar, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
 - Persistência local em JSON.
 - Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
-- Avisos de falha de gravação e confirmação antes de fechar quando não é possível salvar.
+- Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
+- Registro de falhas inesperadas em `%LocalAppData%\SideNotes\logs\app.log`, sem registrar o conteúdo das notas.
+- Execução em instância única: uma segunda abertura apenas informa que o aplicativo já está em execução.
 - Fixação de até cinco notas no Desk, compartilhadas com o modo Janela.
 - Pílula lateral com abertura do leque por clique e prévias ao passar o mouse nas abas.
 - Editor do Desk em janela própria, com salvamento automático independente da seleção na janela principal.
@@ -32,6 +34,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Binding de dados e `INotifyPropertyChanged`.
 - `ObservableCollection` e `ICollectionView`.
 - `DispatcherTimer` para o salvamento automático.
+- Mutex nomeado para garantir instância única do aplicativo.
 - `System.Text.Json` para leitura e gravação dos dados.
 - APIs do Windows (Win32) via P/Invoke para consultar monitores e posicionar o Desk.
 - Reconhecimento de DPI por monitor com `PerMonitorV2` no manifesto do aplicativo.
@@ -101,13 +104,21 @@ A indicação de quais notas estão fixadas no Desk também é salva em `notes.j
 
 A posição vertical é armazenada proporcionalmente à área disponível e restaurada ao iniciar. Se o monitor salvo não estiver disponível, ou se o arquivo antigo não contiver seu identificador, o Desk usa o monitor principal. Se esse arquivo não existir ou contiver dados inválidos, o Desk usa a posição padrão: lado direito, centralizado no monitor principal. Falhas de leitura ou gravação da posição são registradas na saída de depuração.
 
+Falhas inesperadas do aplicativo são registradas em:
+
+```text
+%LocalAppData%\SideNotes\logs\app.log
+```
+
+O arquivo é rotacionado ao atingir cerca de 1 MB e não contém o título nem o conteúdo das notas.
+
 ## Organização do código
 
 O projeto separa o modelo de dados, a interface, o estado da aplicação e o armazenamento, seguindo uma organização baseada em MVVM. Dentro de `SideNotes/`, os arquivos estão agrupados nas pastas `Models`, `ViewModels`, `Views` e `Services`, com namespaces correspondentes (`SideNotes.Models`, `SideNotes.ViewModels`, `SideNotes.Views` e `SideNotes.Services`).
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `App.xaml` e `App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, criação das janelas, tratamento de falhas ao carregar os dados e encerramento dos serviços. |
+| `App.xaml` e `App.xaml.cs` | Inicialização do repositório compartilhado e dos ViewModels, garantia de instância única, tratamento global de falhas, criação das janelas e encerramento dos serviços. |
 | `Models/Note.cs` | Dados da nota, incluindo fixação no Desk, e notificações de alteração. |
 | `Models/DeskPosition.cs` | Identificador do monitor, lado e posição vertical do Desk. |
 | `ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |
@@ -120,7 +131,8 @@ O projeto separa o modelo de dados, a interface, o estado da aplicação e o arm
 | `Services/NoteStorage.cs` | Leitura, validação e gravação do arquivo JSON das notas. |
 | `Services/DeskPositionStore.cs` | Leitura, validação e gravação de `desk_position.json`. |
 | `Services/DeskScreenService.cs` | Consulta dos monitores, área útil, posição do cursor e dimensões e posicionamento da janela via Win32. |
-| `Services/AppPaths.cs` | Centralização dos caminhos de armazenamento local. |
+| `Services/AppPaths.cs` | Centralização dos caminhos de armazenamento e de log. |
+| `Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
 | `app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
 
