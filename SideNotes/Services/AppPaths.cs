@@ -13,5 +13,9 @@ namespace SideNotes.Services
         public static string NotesFilePath { get; } = Path.Combine(DataDirectory, "notes.json");
 
         public static string DeskPositionFilePath { get; } = Path.Combine(DataDirectory, "desk_position.json");
+
+        public static string LogsDirectory { get; } = Path.Combine(DataDirectory, "logs");
+
+        public static string LogFilePath { get; } = Path.Combine(LogsDirectory, "app.log");
     }
 }

@@ -46,11 +46,12 @@ SideNotes/
     DeskWindow.xaml(.cs)    # Pílula lateral, leque, arraste e posicionamento
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
   Services/
-    AppPaths.cs             # Caminhos de armazenamento local
+    AppPaths.cs             # Caminhos de armazenamento e de log
     NoteStorage.cs          # Leitura, validação e gravação de notes.json
     NotesRepository.cs      # Coleção compartilhada, autosave e eventos
     DeskPositionStore.cs    # Leitura e gravação de desk_position.json
     DeskScreenService.cs    # Monitores, DPI e posicionamento via Win32
+    AppLogger.cs            # Registro de falhas inesperadas em arquivo
 ```
 
 Dados persistidos (nunca versione esses arquivos nem os trate como código):
@@ -70,6 +71,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segund
 - **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
 - **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`. Code-behind não deve importar `user32.dll` diretamente.
 - **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente.
+- **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\SideNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
 - **Evolução:** novas dependências externas exigem justificativa no README (hoje o projeto não tem nenhuma). Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
 - **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README.
 - **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`SideNotes.Models`, `SideNotes.ViewModels`, `SideNotes.Views`, `SideNotes.Services`) e atualize o README e este arquivo.
