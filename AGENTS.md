@@ -1,0 +1,112 @@
+# AGENTS.md
+
+O **SideNotes** é um aplicativo de notas para Windows feito em **C# com WPF (.NET 10)**. Ele permite criar, editar, buscar e excluir notas com salvamento automático, além de fixar até cinco notas em um painel lateral chamado **Desk**, que pode ser arrastado entre monitores. As notas são compartilhadas entre as janelas em memória e persistidas localmente em JSON em `%LocalAppData%\SideNotes`. O projeto segue uma organização MVVM (Models, ViewModels, Views e Services), sem dependências externas, e é mantido como projeto de aprendizado e portfólio.
+
+## Antes de cada tarefa
+
+1. Leia o `README.md` — ele descreve o comportamento atual do aplicativo.
+2. Leia este `AGENTS.md` — ele descreve as regras de arquitetura, convenções e limites.
+3. Só então consulte o código e os commits recentes (`git log`) para confirmar como a funcionalidade funciona hoje.
+4. Se a documentação divergir do código, trate o código como a fonte da verdade e **corrija a documentação na mesma alteração**.
+
+## Comandos
+
+> [!IMPORTANT]
+> O projeto usa WPF e `net10.0-windows`: **só compila e executa no Windows**. Não é possível validar build ou execução em Linux/macOS.
+
+Execute a partir da raiz do repositório (onde está `SideNotes.slnx`):
+
+| Objetivo | Comando |
+| --- | --- |
+| Compilar a solução | `dotnet build .\SideNotes.slnx` |
+| Executar o aplicativo | `dotnet run --project .\SideNotes\SideNotes.csproj` |
+| Limpar artefatos | `dotnet clean .\SideNotes.slnx` |
+| Restaurar dependências | `dotnet restore .\SideNotes.slnx` |
+
+Ainda **não existe projeto de testes**. Se um for criado, adicione aqui o comando (`dotnet test`) e a descrição da suíte. Antes de considerar uma alteração concluída, o build deve terminar com **0 erros e 0 avisos**.
+
+## Estrutura do repositório
+
+```text
+SideNotes.slnx              # Solução (formato .slnx)
+README.md                   # Comportamento, armazenamento e organização do código
+AGENTS.md                   # Este arquivo: regras para pessoas e agentes
+SideNotes/
+  App.xaml, App.xaml.cs     # Composition root: cria repositório, VMs e janelas
+  app.manifest              # asInvoker + reconhecimento de DPI por monitor (PerMonitorV2)
+  AssemblyInfo.cs
+  Models/
+    Note.cs                 # Dados da nota + INotifyPropertyChanged
+    DeskPosition.cs         # Monitor, lado e posição vertical do Desk
+  ViewModels/
+    MainViewModel.cs        # Seleção, busca, ações da janela principal
+    DeskViewModel.cs        # Notas fixadas, leque e estado do Desk
+  Views/
+    MainWindow.xaml(.cs)    # Lista, busca e editor da janela principal
+    DeskWindow.xaml(.cs)    # Pílula lateral, leque, arraste e posicionamento
+    NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
+  Services/
+    AppPaths.cs             # Caminhos de armazenamento local
+    NoteStorage.cs          # Leitura, validação e gravação de notes.json
+    NotesRepository.cs      # Coleção compartilhada, autosave e eventos
+    DeskPositionStore.cs    # Leitura e gravação de desk_position.json
+    DeskScreenService.cs    # Monitores, DPI e posicionamento via Win32
+```
+
+Dados persistidos (nunca versione esses arquivos nem os trate como código):
+
+- `%LocalAppData%\SideNotes\notes.json` — notas e estado de fixação no Desk.
+- `%LocalAppData%\SideNotes\desk_position.json` — monitor, lado e posição do Desk.
+- `%LocalAppData%\SideNotes\notes-invalid-<id>.json` — cópia preservada quando o arquivo principal é inválido.
+
+Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segundo após a última alteração**.
+
+## Regras de arquitetura
+
+- **MVVM:** Models guardam dados; ViewModels guardam estado e ações; Views contêm apenas layout, bindings e comportamento visual; Services concentram IO, Win32 e regras de infraestrutura.
+- **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
+- **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. Não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
+- **Persistência isolada:** somente `Services` grava ou lê arquivos. Caminhos vêm de `AppPaths`; nunca hardcode caminhos de dados no código.
+- **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
+- **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`. Code-behind não deve importar `user32.dll` diretamente.
+- **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente.
+- **Evolução:** novas dependências externas exigem justificativa no README (hoje o projeto não tem nenhuma). Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
+- **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README.
+- **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`SideNotes.Models`, `SideNotes.ViewModels`, `SideNotes.Views`, `SideNotes.Services`) e atualize o README e este arquivo.
+
+## Convenções de código
+
+- O código deve seguir os princípios **SOLID** e **Clean Code**, mantendo o estilo já existente no projeto (C# moderno, `Nullable` habilitado, tipos explícitos quando ajudam a leitura).
+- **Métodos não devem acumular funções:** cada método faz uma única coisa; se a descrição precisa de "e", divida.
+- **Comentários explicam o porquê** de uma decisão não óbvia (transação, cópia histórica, tolerância de relógio); nunca repetem o que o código já diz.
+- **Nomes de variáveis dizem o que armazenam**, sem abreviações confusas e sem o tipo no nome.
+- Use `PascalCase` para tipos, propriedades, métodos e eventos; `camelCase` para parâmetros, locais e campos (seguindo o existente, sem prefixo `_`). Sufixe métodos assíncronos com `Async`.
+- Identificadores e código em **inglês**; textos de interface e mensagens ao usuário em **português**.
+- Uma classe por arquivo, nome do arquivo igual ao da classe. Evite `using` não utilizado e código comentado.
+- Evite números mágicos: nomeie constantes ou use configuração quando o valor tiver significado de domínio.
+
+## Documentação
+
+Atualize o **README.md** e este **AGENTS.md** no **mesmo commit** sempre que uma alteração mudar:
+
+- comportamento visível ao usuário (fluxos, atalhos, mensagens, limites);
+- arquivos, pastas ou responsabilidades de classes;
+- formato ou local dos dados persistidos;
+- comandos de build, execução ou teste;
+- dependências, requisitos de sistema ou plataforma suportada.
+
+## O que não fazer
+
+### Código
+
+- **Não usar tipos genéricos/inseguros para "calar" erros:** proibido usar `any`, `@ts-ignore`, `# type: ignore`, `dynamic` ou suprimir warnings do linter/compilador para fazer o código passar. Em C#, isso inclui `#pragma warning disable`, `[SuppressMessage]` sem justificativa real, o operador `!` (null-forgiving) sem garantia documentada e `object` para evitar tipagem correta.
+- **Não deixar código morto ou placeholders:** nunca entregue respostas com `// TODO: implementar aqui`, `pass`, `NotImplementedError`, `throw new NotImplementedException()` ou funções vazias simulando comportamento.
+- **Não engolir exceções:** proibido usar blocos `try/catch` vazios ou capturar exceções genéricas (`Exception`, `catch (e) { }`) sem logar ou tratar adequadamente. Prefira exceções específicas com filtro `when`; quando a falha for esperada, retorne um resultado explícito.
+- **Não hardcodar valores sensíveis ou de ambiente:** nunca insira URLs, chaves de API, credenciais, portas ou caminhos absolutos locais diretamente no código. Use `AppPaths`/`Environment` para caminhos.
+- **Não misturar mudanças:** não misture refatoração, formatação e nova funcionalidade no mesmo commit.
+
+### Git
+
+- **Não commitar direto na `main`/`master`:** antes de commitar, confirme que está em uma branch de feature/fix (`git branch --show-current`). Se não estiver, crie uma antes.
+- **Não fazer `git push` sem confirmação:** alterações ficam apenas locais até o desenvolvedor revisar o `git diff` e autorizar o envio ao remoto.
+- **Não gerar commits genéricos ou gigantes:** nunca use mensagens vagas como `fix`, `update` ou `changes`. Descreva o escopo com o padrão já usado no repositório (`feat:`, `fix:`, `refactor:`, `docs:`).
