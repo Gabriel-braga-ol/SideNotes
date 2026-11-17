@@ -2,10 +2,10 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using SideNotes.Services;
-using SideNotes.ViewModels;
+using DearNotes.Services;
+using DearNotes.ViewModels;
 
-namespace SideNotes.Views
+namespace DearNotes.Views
 {
     public partial class NoteEditorWindow : Window
     {

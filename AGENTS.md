@@ -1,6 +1,6 @@
 # AGENTS.md
 
-O **SideNotes** é um aplicativo de notas para Windows feito em **C# com WPF (.NET 10)**. Ele permite criar, editar, buscar e excluir notas com salvamento automático, além de fixar até cinco notas em um painel lateral chamado **Desk**, que pode ser arrastado entre monitores. As notas são compartilhadas entre as janelas em memória e persistidas localmente em JSON em `%LocalAppData%\SideNotes`. O projeto segue uma organização MVVM (Models, ViewModels, Views e Services), sem dependências externas, e é mantido como projeto de aprendizado e portfólio.
+O **DearNotes** é um aplicativo de notas para Windows feito em **C# com WPF (.NET 10)**. Ele permite criar, editar, buscar e excluir notas com salvamento automático, além de fixar até cinco notas em um painel lateral chamado **Desk**, que pode ser arrastado entre monitores. As notas são compartilhadas entre as janelas em memória e persistidas localmente em JSON em `%LocalAppData%\DearNotes`. O projeto segue uma organização MVVM (Models, ViewModels, Views e Services), sem dependências externas, e é mantido como projeto de aprendizado e portfólio.
 
 ## Antes de cada tarefa
 
@@ -14,24 +14,24 @@ O **SideNotes** é um aplicativo de notas para Windows feito em **C# com WPF (.N
 > [!IMPORTANT]
 > O projeto usa WPF e `net10.0-windows`: **só compila e executa no Windows**. Não é possível validar build ou execução em Linux/macOS.
 
-Execute a partir da raiz do repositório (onde está `SideNotes.slnx`):
+Execute a partir da raiz do repositório (onde está `DearNotes.slnx`):
 
 | Objetivo | Comando |
 | --- | --- |
-| Compilar a solução | `dotnet build .\SideNotes.slnx` |
-| Executar o aplicativo | `dotnet run --project .\SideNotes\SideNotes.csproj` |
-| Limpar artefatos | `dotnet clean .\SideNotes.slnx` |
-| Restaurar dependências | `dotnet restore .\SideNotes.slnx` |
+| Compilar a solução | `dotnet build .\DearNotes.slnx` |
+| Executar o aplicativo | `dotnet run --project .\DearNotes\DearNotes.csproj` |
+| Limpar artefatos | `dotnet clean .\DearNotes.slnx` |
+| Restaurar dependências | `dotnet restore .\DearNotes.slnx` |
 
 Ainda **não existe projeto de testes**. Se um for criado, adicione aqui o comando (`dotnet test`) e a descrição da suíte. Antes de considerar uma alteração concluída, o build deve terminar com **0 erros e 0 avisos**.
 
 ## Estrutura do repositório
 
 ```text
-SideNotes.slnx              # Solução (formato .slnx)
+DearNotes.slnx              # Solução (formato .slnx)
 README.md                   # Comportamento, armazenamento e organização do código
 AGENTS.md                   # Este arquivo: regras para pessoas e agentes
-SideNotes/
+DearNotes/
   App.xaml, App.xaml.cs     # Composition root: cria repositório, VMs e janelas
   app.manifest              # asInvoker + reconhecimento de DPI por monitor (PerMonitorV2)
   AssemblyInfo.cs
@@ -56,9 +56,9 @@ SideNotes/
 
 Dados persistidos (nunca versione esses arquivos nem os trate como código):
 
-- `%LocalAppData%\SideNotes\notes.json` — notas e estado de fixação no Desk.
-- `%LocalAppData%\SideNotes\desk_position.json` — monitor, lado e posição do Desk.
-- `%LocalAppData%\SideNotes\notes-invalid-<id>.json` — cópia preservada quando o arquivo principal é inválido.
+- `%LocalAppData%\DearNotes\notes.json` — notas e estado de fixação no Desk.
+- `%LocalAppData%\DearNotes\desk_position.json` — monitor, lado e posição do Desk.
+- `%LocalAppData%\DearNotes\notes-invalid-<id>.json` — cópia preservada quando o arquivo principal é inválido.
 
 Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segundo após a última alteração**, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
 
@@ -71,11 +71,11 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk e autosave **1 segund
 - **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
 - **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`. Code-behind não deve importar `user32.dll` diretamente.
 - **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente. Falhas repetidas de autosave geram um único aviso e novas tentativas com atraso crescente.
-- **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\SideNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
+- **Log sem dados sensíveis:** falhas inesperadas são registradas em `%LocalAppData%\DearNotes\logs\app.log`; nunca registre título ou conteúdo de notas no log.
 - **Instância única:** o aplicativo usa um `Mutex` nomeado. Não contorne essa proteção nem abra duas instâncias sobre o mesmo armazenamento.
 - **Evolução:** novas dependências externas exigem justificativa no README (hoje o projeto não tem nenhuma). Prefira extrair interfaces quando o código precisar ser testado, sem criar camadas cerimoniais.
 - **Compatibilidade de dados:** mudanças no formato de `notes.json` ou `desk_position.json` exigem validação, migração dos dados existentes e atualização do README.
-- **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`SideNotes.Models`, `SideNotes.ViewModels`, `SideNotes.Views`, `SideNotes.Services`) e atualize o README e este arquivo.
+- **Cada funcionalidade nova:** crie os arquivos nas pastas e namespaces corretos (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views`, `DearNotes.Services`) e atualize o README e este arquivo.
 
 ## Convenções de código
 

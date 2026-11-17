@@ -4,9 +4,9 @@ using System.IO;
 using System.Text.Json;
 using System.Windows.Media;
 using System.Text.RegularExpressions;
-using SideNotes.Models;
+using DearNotes.Models;
 
-namespace SideNotes.Services
+namespace DearNotes.Services
 {
     public static class NoteStorage 
     {

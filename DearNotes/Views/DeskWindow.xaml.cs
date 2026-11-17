@@ -3,16 +3,16 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using SideNotes.ViewModels;
+using DearNotes.ViewModels;
 using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Collections.Specialized;
-using SideNotes.Models;
-using SideNotes.Services;
+using DearNotes.Models;
+using DearNotes.Services;
 using System.ComponentModel;
 using System.Windows.Interop;
 
-namespace SideNotes.Views
+namespace DearNotes.Views
 {
     public partial class DeskWindow : Window
     {

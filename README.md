@@ -1,4 +1,4 @@
-# SideNotes
+# DearNotes
 
 Aplicativo de notas para Windows desenvolvido em **C# com WPF**, para organizar lembretes e anotações com edição simples e salvamento automático.
 
@@ -17,7 +17,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
 - Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
-- Registro de falhas inesperadas em `%LocalAppData%\SideNotes\logs\app.log`, sem registrar o conteúdo das notas.
+- Registro de falhas inesperadas em `%LocalAppData%\DearNotes\logs\app.log`, sem registrar o conteúdo das notas.
 - Execução em instância única: uma segunda abertura apenas informa que o aplicativo já está em execução.
 - Fixação de até cinco notas no Desk, compartilhadas com o modo Janela.
 - Pílula lateral com abertura do leque por clique e prévias ao passar o mouse nas abas.
@@ -50,16 +50,16 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 ### Pelo Visual Studio
 
 1. Baixe ou clone este repositório.
-2. Abra a solução `SideNotes.slnx`.
-3. Defina `SideNotes` como projeto de inicialização, se necessário.
+2. Abra a solução `DearNotes.slnx`.
+3. Defina `DearNotes` como projeto de inicialização, se necessário.
 4. Execute com **F5**.
 
 ### Pelo terminal
 
-Na pasta raiz do repositório, que contém `SideNotes.slnx`, execute:
+Na pasta raiz do repositório, que contém `DearNotes.slnx`, execute:
 
 ```powershell
-dotnet run --project ".\SideNotes\SideNotes.csproj"
+dotnet run --project ".\DearNotes\DearNotes.csproj"
 ```
 
 ## Como usar
@@ -91,7 +91,7 @@ A recuperação automática após uma desconexão não substitui a preferência 
 As notas são armazenadas neste caminho do usuário do Windows:
 
 ```text
-%LocalAppData%\SideNotes\notes.json
+%LocalAppData%\DearNotes\notes.json
 ```
 
 Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substitui o arquivo principal. Ao detectar JSON ou dados inválidos, preserva uma cópia chamada `notes-invalid-<identificador>.json` e informa sua localização.
@@ -99,7 +99,7 @@ Na gravação, o aplicativo escreve primeiro em `notes.json.tmp` e depois substi
 A indicação de quais notas estão fixadas no Desk também é salva em `notes.json`. O identificador do monitor, o lado e a posição vertical da pílula ficam em um arquivo separado:
 
 ```text
-%LocalAppData%\SideNotes\desk_position.json
+%LocalAppData%\DearNotes\desk_position.json
 ```
 
 A posição vertical é armazenada proporcionalmente à área disponível e restaurada ao iniciar. Se o monitor salvo não estiver disponível, ou se o arquivo antigo não contiver seu identificador, o Desk usa o monitor principal. Se esse arquivo não existir ou contiver dados inválidos, o Desk usa a posição padrão: lado direito, centralizado no monitor principal. Falhas de leitura ou gravação da posição são registradas na saída de depuração.
@@ -107,14 +107,14 @@ A posição vertical é armazenada proporcionalmente à área disponível e rest
 Falhas inesperadas do aplicativo são registradas em:
 
 ```text
-%LocalAppData%\SideNotes\logs\app.log
+%LocalAppData%\DearNotes\logs\app.log
 ```
 
 O arquivo é rotacionado ao atingir cerca de 1 MB e não contém o título nem o conteúdo das notas.
 
 ## Organização do código
 
-O projeto separa o modelo de dados, a interface, o estado da aplicação e o armazenamento, seguindo uma organização baseada em MVVM. Dentro de `SideNotes/`, os arquivos estão agrupados nas pastas `Models`, `ViewModels`, `Views` e `Services`, com namespaces correspondentes (`SideNotes.Models`, `SideNotes.ViewModels`, `SideNotes.Views` e `SideNotes.Services`).
+O projeto separa o modelo de dados, a interface, o estado da aplicação e o armazenamento, seguindo uma organização baseada em MVVM. Dentro de `DearNotes/`, os arquivos estão agrupados nas pastas `Models`, `ViewModels`, `Views` e `Services`, com namespaces correspondentes (`DearNotes.Models`, `DearNotes.ViewModels`, `DearNotes.Views` e `DearNotes.Services`).
 
 | Arquivo | Responsabilidade |
 | --- | --- |

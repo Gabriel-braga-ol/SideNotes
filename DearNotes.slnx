@@ -3,5 +3,5 @@
     <File Path=".gitignore" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="SideNotes/SideNotes.csproj" />
+  <Project Path="DearNotes/DearNotes.csproj" />
 </Solution>

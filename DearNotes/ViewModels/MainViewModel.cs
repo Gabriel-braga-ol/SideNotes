@@ -3,10 +3,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Data;
-using SideNotes.Models;
-using SideNotes.Services;
+using DearNotes.Models;
+using DearNotes.Services;
 
-namespace SideNotes.ViewModels
+namespace DearNotes.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {

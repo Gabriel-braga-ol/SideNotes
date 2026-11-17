@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace SideNotes.Services
+namespace DearNotes.Services
 {
     public static class AppLogger
     {
