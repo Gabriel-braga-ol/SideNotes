@@ -46,6 +46,9 @@ DearNotes/
   ViewModels/
     MainViewModel.cs        # Seleção, busca, ações da janela principal
     DeskViewModel.cs        # Notas fixadas, leque e estado do Desk
+    RelayCommand.cs         # ICommand usada pelas ações dos ViewModels
+  Themes/
+    Theme.xaml              # Paleta de brushes compartilhada, carregada em App.xaml
   Views/
     MainWindow.xaml(.cs)    # Lista, busca e editor da janela principal
     DeskWindow.xaml(.cs)    # Pílula lateral, leque, arraste e posicionamento
@@ -100,6 +103,8 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 ## Regras de arquitetura
 
 - **MVVM:** Models guardam dados; ViewModels guardam estado e ações; Views contêm apenas layout, bindings e comportamento visual; Services concentram IO, Win32 e regras de infraestrutura.
+- **Ações e avisos:** botões disparam `ICommand` expostos pelo ViewModel, não `Click` no code-behind. Mensagens e confirmações ao usuário passam por `IDialogService`; ViewModels e Views não chamam `MessageBox` diretamente.
+- **Tema:** cores e brushes compartilhados ficam em `Themes/Theme.xaml` e são referenciados por `StaticResource`. A cor individual da nota continua vindo dos dados (`Note.Color`).
 - **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo e os testes referenciam o Core, nunca o contrário.
 - **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
 - **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. `NotesAutoSaver` apenas executa as gravações em segundo plano; não crie timers de salvamento nem cópias da lista em ViewModels ou Views.

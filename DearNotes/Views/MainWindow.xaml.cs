@@ -1,28 +1,19 @@
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System;
 using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using DearNotes.Models;
 using DearNotes.ViewModels;
 
 namespace DearNotes.Views
 {
-
     public partial class MainWindow : Window
     {
         private readonly MainViewModel viewModel;
 
+        private bool isClosing;
+
+        private bool closeConfirmed;
 
         public MainWindow(MainViewModel viewModel)
         {
@@ -30,20 +21,12 @@ namespace DearNotes.Views
 
             this.viewModel = viewModel;
 
-            viewModel.SaveFailed += ViewModel_SaveFailed;
+            viewModel.NoteCreated += ViewModel_NoteCreated;
+
             Closed += MainWindow_Closed;
+            Loaded += MainWindow_Loaded;
 
             DataContext = viewModel;
-
-            Loaded += MainWindow_Loaded;
-        }
-        private void AddNote_Click(object sender, RoutedEventArgs e)
-        {
-            Note note = viewModel.CreateNote();
-
-            NotesList.ScrollIntoView(note);
-
-            TitleTextBox.Focus();
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -55,16 +38,13 @@ namespace DearNotes.Views
                 return;
             }
 
-
-            if (e.Key == Key.Delete && NotesList.IsKeyboardFocusWithin && viewModel.SelectedNote is not null)
+            if (e.Key == Key.Delete &&
+                NotesList.IsKeyboardFocusWithin &&
+                viewModel.SelectedNote is not null)
             {
                 viewModel.DeleteSelectedNote();
             }
         }
-
-        private bool isClosing;
-
-        private bool closeConfirmed;
 
         private async void Window_Closing(object? sender, CancelEventArgs e)
         {
@@ -76,68 +56,32 @@ namespace DearNotes.Views
 
             isClosing = true;
 
-            bool saved = await viewModel.FlushAsync();
-
-            if (!saved)
+            if (!await viewModel.ConfirmCloseAsync())
             {
-                MessageBoxResult answer = MessageBox.Show(
-                    this,
-                    "Não foi possível salvar as notas. \n\n" +
-                    "Deseja fechar mesmo assim? " +
-                    "As alterações não gravadas serão perdidas.", "Falha ao salvar",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning,
-                    MessageBoxResult.No);
-
-                if (answer != MessageBoxResult.Yes)
-                {
-                    isClosing = false;
-                    return;
-                }
+                isClosing = false;
+                return;
             }
 
             closeConfirmed = true;
             Close();
         }
 
-        private void ViewModel_SaveFailed(string message)
+        private void ViewModel_NoteCreated(Note note)
         {
-            MessageBox.Show(
-                this,
-                message,
-                "Falha ao salvar",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-        }
-
-        private void MainWindow_Closed(object? sender, EventArgs e)
-        {
-            viewModel.StopAutoSave();
-            viewModel.SaveFailed -= ViewModel_SaveFailed;
+            NotesList.ScrollIntoView(note);
+            TitleTextBox.Focus();
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            if (viewModel.LoadWarningMessage is not null)
-            {
-                MessageBox.Show(
-                    this,
-                    viewModel.LoadWarningMessage,
-                    "DearNotes");
-            }
+            viewModel.ShowLoadWarningIfAny();
         }
 
-        private void ToggleDeskPin_Click(object sender, RoutedEventArgs e)
+        private void MainWindow_Closed(object? sender, EventArgs e)
         {
-            if (!viewModel.TryToggleSelectedNoteDeskPin(out string? message))
-            {
-                MessageBox.Show(
-                    this,
-                    message ?? "Não foi possível alterar a fixação da nota.",
-                    "DearNotes",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
+            viewModel.NoteCreated -= ViewModel_NoteCreated;
+
+            viewModel.Dispose();
         }
     }
 }

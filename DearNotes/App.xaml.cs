@@ -20,6 +20,8 @@ namespace DearNotes
 
         private Mutex? singleInstanceMutex;
 
+        private readonly MessageBoxDialogService dialogService = new();
+
         private void Application_Startup(
             object sender,
             StartupEventArgs e)
@@ -30,12 +32,10 @@ namespace DearNotes
 
             if (!TryAcquireSingleInstance())
             {
-                MessageBox.Show(
+                dialogService.ShowInformation(
                     "O DearNotes já está aberto.\n\n" +
                     "Feche a outra janela antes de iniciar uma nova instância.",
-                    "DearNotes",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "DearNotes");
 
                 Shutdown();
                 return;
@@ -43,11 +43,9 @@ namespace DearNotes
 
             if (!StorageMigration.TryMigrateIfNeeded(out string? migrationError))
             {
-                MessageBox.Show(
+                dialogService.ShowError(
                     migrationError ?? "Não foi possível migrar as notas.",
-                    "DearNotes",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "DearNotes");
 
                 Shutdown(1);
                 return;
@@ -64,7 +62,7 @@ namespace DearNotes
                 notesRepository = new NotesRepository(
                     new NoteStorage(noteEncryption));
 
-                viewModel = new MainViewModel(notesRepository);
+                viewModel = new MainViewModel(notesRepository, dialogService);
                 deskViewModel = new DeskViewModel(notesRepository);
             }
             catch (Exception ex) when (
@@ -74,13 +72,11 @@ namespace DearNotes
             {
                 AppLogger.LogError("Falha ao carregar as notas", ex);
 
-                MessageBox.Show(
+                dialogService.ShowError(
                     "Não foi possível carregar ou descriptografar as notas.\n\n" +
                     "O aplicativo será encerrado sem salvar alterações.\n\n" +
                     "Detalhes: " + ex.Message,
-                    "DearNotes",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "DearNotes");
 
                 Shutdown();
                 return;
@@ -153,15 +149,13 @@ namespace DearNotes
 
             bool notesSaved = TrySavePendingNotes();
 
-            MessageBox.Show(
+            dialogService.ShowError(
                 "Ocorreu um erro inesperado e o aplicativo será encerrado.\n\n" +
                 (notesSaved
                     ? "As notas foram salvas."
                     : "Não foi possível salvar as notas.") +
                 "\n\nDetalhes em: " + AppPaths.LogFilePath,
-                "DearNotes",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                "DearNotes");
 
             e.Handled = true;
             Shutdown(1);

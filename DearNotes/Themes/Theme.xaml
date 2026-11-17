@@ -1,0 +1,39 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Cores de papel: usadas por mais de uma janela ou que representam a identidade do app. -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#31544B"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#426B60"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#243F38"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1E3A34"/>
+    <SolidColorBrush x:Key="TextStrongBrush" Color="#242A28"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#343B37"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#687078"/>
+
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D5DADC"/>
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F5F6F8"/>
+
+    <!-- Texto e contorno sobre a cor da nota, que vem dos dados. -->
+    <SolidColorBrush x:Key="NoteTabTitleBrush" Color="#A6222826"/>
+    <SolidColorBrush x:Key="NoteTabDividerBrush" Color="#30222826"/>
+    <SolidColorBrush x:Key="NotePreviewTextBrush" Color="#C7242A28"/>
+    <SolidColorBrush x:Key="NoteCardBorderBrush" Color="#20000000"/>
+    <SolidColorBrush x:Key="NoteCardActiveBorderBrush" Color="#30000000"/>
+    <SolidColorBrush x:Key="EditorHeaderTextBrush" Color="#80242A28"/>
+    <SolidColorBrush x:Key="EditorOutlineBrush" Color="#24000000"/>
+    <Color x:Key="ShadowColor">#000000</Color>
+
+    <!-- Botão de fixar no Desk. -->
+    <SolidColorBrush x:Key="PinBackgroundBrush" Color="#B3ECEDEF"/>
+    <SolidColorBrush x:Key="PinHoverBackgroundBrush" Color="#E6ECEDEF"/>
+    <SolidColorBrush x:Key="PinIconBrush" Color="#7D828A"/>
+    <SolidColorBrush x:Key="PinIconActiveBrush" Color="#626870"/>
+
+    <!-- Pílula e cartões do Desk. -->
+    <SolidColorBrush x:Key="DeskPillBackgroundBrush" Color="#B3272B30"/>
+    <SolidColorBrush x:Key="DeskPillHoverBackgroundBrush" Color="#E033383F"/>
+    <SolidColorBrush x:Key="DeskPillBorderBrush" Color="#40FFFFFF"/>
+    <SolidColorBrush x:Key="DeskPillHoverBorderBrush" Color="#70FFFFFF"/>
+
+</ResourceDictionary>

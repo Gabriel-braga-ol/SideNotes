@@ -2,15 +2,19 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Data;
+using System.Windows.Input;
 using DearNotes.Models;
 using DearNotes.Services;
 
 namespace DearNotes.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         private readonly NotesRepository repository;
+
+        private readonly IDialogService dialogService;
 
         private Note? selectedNote;
         private string searchText = string.Empty;
@@ -24,25 +28,38 @@ namespace DearNotes.ViewModels
 
         public ICollectionView FilteredNotes { get; }
 
+        public ICommand CreateNoteCommand { get; }
+
+        public ICommand ToggleDeskPinCommand => toggleDeskPinCommand;
+
+        private readonly RelayCommand toggleDeskPinCommand;
+
         private int PinnedNotesCount =>
             Notes.Count(note => note.IsPinnedToDesk);
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public event Action<string>? SaveFailed
-        {
-            add => repository.SaveFailed += value;
-            remove => repository.SaveFailed -= value;
-        }
+        // A View usa este evento para rolar até a nota e devolver o foco ao título.
+        public event Action<Note>? NoteCreated;
 
-        public MainViewModel(NotesRepository repository)
+        public MainViewModel(
+            NotesRepository repository,
+            IDialogService dialogService)
         {
             this.repository = repository;
+            this.dialogService = dialogService;
 
             FilteredNotes = new ListCollectionView(Notes)
             {
                 Filter = MatchesSearch
             };
+
+            CreateNoteCommand = new RelayCommand(CreateNote);
+            toggleDeskPinCommand = new RelayCommand(
+                ToggleDeskPin,
+                () => SelectedNote is not null);
+
+            repository.SaveFailed += OnSaveFailed;
 
             SelectedNote = Notes.FirstOrDefault();
         }
@@ -67,18 +84,6 @@ namespace DearNotes.ViewModels
                     this,
                     new PropertyChangedEventArgs(nameof(SearchText)));
             }
-        }
-
-        public Note CreateNote()
-        {
-            SearchText = string.Empty;
-
-            Note note = repository.CreateNote();
-
-            SetSelectedNote(note, savePreviousNote: false);
-            repository.SavePendingChanges();
-
-            return note;
         }
 
         public void DeleteSelectedNote()
@@ -109,6 +114,70 @@ namespace DearNotes.ViewModels
             repository.SavePendingChanges();
         }
 
+        public void SaveCurrentNote()
+        {
+            repository.SavePendingChanges();
+        }
+
+        public async Task<bool> ConfirmCloseAsync()
+        {
+            bool saved = await repository.FlushAsync();
+
+            if (saved) return true;
+
+            return dialogService.Confirm(
+                "Não foi possível salvar as notas.\n\n" +
+                "Deseja fechar mesmo assim? " +
+                "As alterações não gravadas serão perdidas.",
+                "Falha ao salvar");
+        }
+
+        public void ShowLoadWarningIfAny()
+        {
+            if (LoadWarningMessage is null) return;
+
+            dialogService.ShowWarning(LoadWarningMessage, "DearNotes");
+        }
+
+        public void Dispose()
+        {
+            repository.SaveFailed -= OnSaveFailed;
+            repository.StopAutoSave();
+        }
+
+        private void CreateNote()
+        {
+            SearchText = string.Empty;
+
+            Note note = repository.CreateNote();
+
+            SetSelectedNote(note, savePreviousNote: false);
+            repository.SavePendingChanges();
+
+            NoteCreated?.Invoke(note);
+        }
+
+        private void ToggleDeskPin()
+        {
+            if (SelectedNote is null) return;
+
+            if (!SelectedNote.IsPinnedToDesk &&
+                PinnedNotesCount >= MaxDeskPinnedNotes)
+            {
+                dialogService.ShowInformation(
+                    $"Você pode fixar no máximo " +
+                    $"{MaxDeskPinnedNotes} notas no Desk.",
+                    "DearNotes");
+
+                return;
+            }
+
+            SelectedNote.IsPinnedToDesk =
+                !SelectedNote.IsPinnedToDesk;
+
+            repository.SavePendingChanges();
+        }
+
         private void SetSelectedNote(
             Note? value,
             bool savePreviousNote = true)
@@ -123,6 +192,8 @@ namespace DearNotes.ViewModels
             }
 
             selectedNote = value;
+
+            toggleDeskPinCommand.RaiseCanExecuteChanged();
 
             PropertyChanged?.Invoke(
                 this,
@@ -143,47 +214,9 @@ namespace DearNotes.ViewModels
                        query, StringComparison.OrdinalIgnoreCase);
         }
 
-        public bool TryToggleSelectedNoteDeskPin(
-            out string? message)
+        private void OnSaveFailed(string message)
         {
-            message = null;
-
-            if (SelectedNote is null)
-            {
-                message = "Selecione uma nota primeiro.";
-                return false;
-            }
-
-            if (!SelectedNote.IsPinnedToDesk &&
-                PinnedNotesCount >= MaxDeskPinnedNotes)
-            {
-                message =
-                    $"Você pode fixar no máximo {MaxDeskPinnedNotes} notas no Desk.";
-
-                return false;
-            }
-
-            SelectedNote.IsPinnedToDesk =
-                !SelectedNote.IsPinnedToDesk;
-
-            repository.SavePendingChanges();
-
-            return true;
-        }
-
-        public void SaveCurrentNote()
-        {
-            repository.SavePendingChanges();
-        }
-
-        public Task<bool> FlushAsync()
-        {
-            return repository.FlushAsync();
-        }
-
-        public void StopAutoSave()
-        {
-            repository.StopAutoSave();
+            dialogService.ShowWarning(message, "Falha ao salvar");
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows.Data;
+using System.Windows.Input;
 using DearNotes.Models;
 using DearNotes.Services;
 
@@ -24,6 +25,8 @@ namespace DearNotes.ViewModels
         public bool IsExpanded => isExpanded;
         public bool IsOnRight => isOnRight;
 
+        public ICommand CloseOpenedNoteCommand { get; }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public DeskViewModel(NotesRepository repository)
@@ -34,6 +37,8 @@ namespace DearNotes.ViewModels
             {
                 Filter = item => item is Note note && note.IsPinnedToDesk
             };
+
+            CloseOpenedNoteCommand = new RelayCommand(CloseNote);
 
             repository.NoteChanged += OnNoteChanged;
             Notes.CollectionChanged += OnNotesCollectionChanged;
@@ -51,7 +56,7 @@ namespace DearNotes.ViewModels
             UpdateState(openedNote, expanded && !DeskNotes.IsEmpty);
         }
 
-        public void CloseNote(bool immediate = false)
+        public void CloseNote()
         {
             UpdateState(null, isExpanded);
         }
