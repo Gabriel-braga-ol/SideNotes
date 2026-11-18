@@ -38,6 +38,28 @@ namespace DearNotes.Tests
         }
 
         [Fact]
+        public void NoteChanged_WhenOpenedNoteIsUnpinned_ClosesNoteAndCollapsesDesk()
+        {
+            var repository = new FakeNotesRepository();
+            Note note = CreateNote("Fixada", isPinned: true);
+
+            repository.Notes.Add(note);
+
+            using var viewModel = new DeskViewModel(repository);
+
+            viewModel.OpenNote(note);
+
+            note.IsPinnedToDesk = false;
+
+            repository.ReportNoteChanged(
+                note,
+                nameof(Note.IsPinnedToDesk));
+
+            Assert.Null(viewModel.OpenedNote);
+            Assert.False(viewModel.IsExpanded);
+        }
+
+        [Fact]
         public void SetExpanded_WhenDeskIsEmpty_StaysCollapsed()
         {
             var repository = new FakeNotesRepository();

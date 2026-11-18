@@ -104,13 +104,17 @@ namespace DearNotes.ViewModels
 
         private void ValidateState()
         {
-            if (openedNote is not null &&
+            bool openedNoteIsGone =
+                openedNote is not null &&
                 (!Notes.Contains(openedNote) ||
-                 !openedNote.IsPinnedToDesk))
+                 !openedNote.IsPinnedToDesk);
+
+            if (openedNoteIsGone)
             {
                 CloseNote();
             }
-            else if (DeskNotes.IsEmpty)
+
+            if (DeskNotes.IsEmpty)
             {
                 SetExpanded(false);
             }
