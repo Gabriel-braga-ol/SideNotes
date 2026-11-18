@@ -60,6 +60,7 @@ DearNotes/
     DeskKeyboardNavigator.cs # Foco, atalhos e navegação por teclado do Desk
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
   Services/
+    INotesRepository.cs     # Contrato da coleção compartilhada e do autosave
     NotesRepository.cs      # Coleção compartilhada, autosave e eventos
     DpapiKeyProvider.cs     # Cria/abre notes.key com DPAPI CurrentUser
     DeskScreenService.cs    # Monitores, DPI e posicionamento via Win32
@@ -113,7 +114,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 - **Tema:** cores e brushes compartilhados ficam em `Themes/Theme.xaml` e são referenciados por `StaticResource`. A cor individual da nota continua vindo dos dados (`Note.Color`).
 - **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo e os testes referenciam o Core, nunca o contrário.
 - **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
-- **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. `NotesAutoSaver` apenas executa as gravações em segundo plano; não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
+- **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. Os ViewModels dependem de `INotesRepository`, não da implementação. `NotesAutoSaver` apenas executa as gravações em segundo plano; não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
 - **Autosave em segundo plano:** a serialização e a escrita recebem um snapshot imutável das notas e nunca rodam na thread da interface. Uma única gravação pode estar em andamento; snapshots pendentes são substituídos pelo mais recente. Uma falha inesperada libera a fila e é comunicada como falha de gravação, para que o encerramento nunca fique esperando. Não grave notas diretamente na thread de UI.
 - **Persistência isolada:** somente `Services` grava ou lê arquivos. Caminhos vêm de `AppPaths`; nunca hardcode caminhos de dados no código.
 - **Criptografia em repouso:** `notes.json` é sempre gravado como envelope cifrado por `AesGcmNoteEncryption`, com chave fornecida por `IKeyProvider` e protegida pelo DPAPI. Não grave notas em texto puro no disco, não registre chaves, nonces ou conteúdo em log e não desative a validação da tag para "recuperar" um arquivo. A chave (`notes.key`) deve ser copiada junto de qualquer backup manual; sem ela, as notas cifradas são irrecuperáveis.

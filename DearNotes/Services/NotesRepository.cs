@@ -15,7 +15,7 @@ namespace DearNotes.Services
 {
     // Responsável pela coleção compartilhada, pelo atraso do autosave,
     // pelas novas tentativas e pelo envio de snapshots ao NotesAutoSaver.
-    public sealed class NotesRepository : IDisposable
+    public sealed class NotesRepository : INotesRepository, IDisposable
     {
         private const string SaveFailureMessage =
             "Não foi possível salvar as notas no arquivo.\n\n" +

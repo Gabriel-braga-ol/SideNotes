@@ -12,7 +12,7 @@ namespace DearNotes.ViewModels
 {
     public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
-        private readonly NotesRepository repository;
+        private readonly INotesRepository repository;
 
         private readonly IDialogService dialogService;
 
@@ -43,7 +43,7 @@ namespace DearNotes.ViewModels
         public event Action<Note>? NoteCreated;
 
         public MainViewModel(
-            NotesRepository repository,
+            INotesRepository repository,
             IDialogService dialogService)
         {
             this.repository = repository;
