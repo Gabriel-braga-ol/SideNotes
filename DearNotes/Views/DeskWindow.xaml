@@ -13,13 +13,12 @@
         ShowActivated="False"
         Topmost="False"
         Loaded="Window_Loaded"
-        MouseEnter="Window_MouseEnter"
-        MouseLeave="Window_MouseLeave"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
-    <Grid x:Name="DeskRoot">
+    <Grid x:Name="DeskRoot"
+          KeyboardNavigation.TabNavigation="Cycle">
         <!-- Abas das notas fixadas -->
         <ItemsControl x:Name="NoteTabs"
                       ItemsSource="{Binding DeskNotes}"
@@ -28,6 +27,7 @@
                       Height="400"
                       HorizontalAlignment="Right"
                       VerticalAlignment="Center"
+                      KeyboardNavigation.TabIndex="1"
                       ClipToBounds="False">
 
             <ItemsControl.RenderTransform>
@@ -52,6 +52,10 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Panel.ZIndex" Value="100"/>
                         </Trigger>
+
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter Property="Panel.ZIndex" Value="100"/>
+                        </Trigger>
                     </Style.Triggers>
                 </Style>
             </ItemsControl.ItemContainerStyle>
@@ -73,6 +77,11 @@
                                 BorderBrush="{StaticResource NoteCardBorderBrush}"
                                 BorderThickness="1"
                                 Cursor="Hand"
+                                Focusable="True"
+                                FocusVisualStyle="{x:Null}"
+                                KeyDown="NoteTab_KeyDown"
+                                AutomationProperties.Name="{Binding Title}"
+                                AutomationProperties.HelpText="Pressione Enter para abrir a nota e Escape para recolher o Desk."
                                 MouseLeftButtonDown="NoteTab_MouseLeftButtonDown"
                                 RenderTransformOrigin="0.5,0.5">
 
@@ -205,6 +214,18 @@
                                 </Setter.Value>
                             </Setter>
                         </MultiDataTrigger>
+
+                        <DataTrigger Binding="{Binding IsKeyboardFocused,
+                                                     ElementName=NoteCard}"
+                                     Value="True">
+                            <Setter TargetName="NoteCard"
+                                    Property="BorderBrush"
+                                    Value="{StaticResource NoteCardFocusBorderBrush}"/>
+
+                            <Setter TargetName="NoteCard"
+                                    Property="BorderThickness"
+                                    Value="2"/>
+                        </DataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -219,13 +240,14 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 Cursor="SizeAll"
+                Focusable="True"
+                FocusVisualStyle="{x:Null}"
+                KeyDown="Pill_KeyDown"
                 MouseLeftButtonDown="Pill_MouseLeftButtonDown"
-                MouseRightButtonDown="Pill_MouseRightButtonDown"
-                MouseRightButtonUp="Pill_MouseRightButtonUp"
-                MouseMove="Pill_MouseMove"
-                LostMouseCapture="Pill_LostMouseCapture"
                 ContextMenuService.IsEnabled="False"
-                AutomationProperties.Name="Notas fixadas no Desk">
+                KeyboardNavigation.TabIndex="0"
+                AutomationProperties.Name="Notas fixadas no Desk"
+                AutomationProperties.HelpText="Pressione Enter para abrir ou recolher o leque e Escape para recolher.">
 
             <Border CornerRadius="7"
                     MinHeight="36"
@@ -250,6 +272,14 @@
 
                                 <Setter Property="BorderBrush"
                                         Value="{StaticResource DeskPillHoverBorderBrush}"/>
+                            </DataTrigger>
+
+                            <DataTrigger Binding="{Binding IsKeyboardFocused,
+                                                ElementName=PillHandle}"
+                                         Value="True">
+
+                                <Setter Property="BorderBrush"
+                                        Value="{StaticResource DeskPillFocusBorderBrush}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

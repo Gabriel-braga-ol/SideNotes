@@ -279,7 +279,9 @@ namespace DearNotes.Tests
                 directory.Path,
                 "notes-invalid-*.json");
 
-            Assert.Equal(5, backups.Length);
+            Assert.Equal(
+                5,
+                backups.Length);
             Assert.DoesNotContain(
                 backups,
                 path => path.EndsWith(
@@ -295,11 +297,15 @@ namespace DearNotes.Tests
                 path => path.EndsWith(
                     "notes-invalid-07.json",
                     StringComparison.Ordinal));
-            Assert.Equal(
-                4,
-                backups.Count(path => path.Contains(
-                    "notes-invalid-0",
-                    StringComparison.Ordinal)));
+
+            for (int index = 1; index <= 4; ++index)
+            {
+                Assert.Contains(
+                    backups,
+                    path => path.EndsWith(
+                        $"notes-invalid-{index:00}.json",
+                        StringComparison.Ordinal));
+            }
         }
 
         [Fact]
