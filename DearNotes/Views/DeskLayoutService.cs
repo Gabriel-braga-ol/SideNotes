@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -62,6 +63,25 @@ namespace DearNotes.Views
         public double RequestedWidth => requestedWidth;
 
         public double VerticalPosition => verticalPosition;
+
+        public static DeskScreen? TryResolveScreen(
+            Func<DeskScreen> findScreen)
+        {
+            try
+            {
+                return findScreen();
+            }
+            catch (Exception ex) when (
+                ex is Win32Exception ||
+                ex is InvalidOperationException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "Desk: não foi possível atualizar o monitor: " +
+                    ex.Message);
+
+                return null;
+            }
+        }
 
         public DeskPosition Initialize()
         {

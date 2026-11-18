@@ -220,10 +220,6 @@
                 VerticalAlignment="Center"
                 Cursor="SizeAll"
                 MouseLeftButtonDown="Pill_MouseLeftButtonDown"
-                MouseRightButtonDown="Pill_MouseRightButtonDown"
-                MouseRightButtonUp="Pill_MouseRightButtonUp"
-                MouseMove="Pill_MouseMove"
-                LostMouseCapture="Pill_LostMouseCapture"
                 ContextMenuService.IsEnabled="False"
                 AutomationProperties.Name="Notas fixadas no Desk">
 

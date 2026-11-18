@@ -31,13 +31,11 @@ namespace DearNotes.Views
 
         private readonly DeskLayoutService layout;
 
-        private bool isDragging;
+        private readonly DeskDragController dragController;
 
         private int fanAnimationVersion;
 
         private NoteEditorWindow? editorWindow;
-
-        private Point dragAnchor;
 
         private int dpiUpdateVersion;
 
@@ -71,6 +69,23 @@ namespace DearNotes.Views
                 screenService,
                 positionStore,
                 Height);
+
+            dragController = new DeskDragController(
+                this,
+                viewModel,
+                screenService,
+                layout,
+                PillHandle,
+                collapseTimer.Stop,
+                CollapseImmediately);
+
+            PillHandle.MouseRightButtonDown +=
+                dragController.HandleMouseRightButtonDown;
+            PillHandle.MouseRightButtonUp +=
+                dragController.HandleMouseRightButtonUp;
+            PillHandle.MouseMove += dragController.HandleMouseMove;
+            PillHandle.LostMouseCapture +=
+                dragController.HandleLostMouseCapture;
 
             DataContext = viewModel;
 
@@ -107,7 +122,7 @@ namespace DearNotes.Views
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
-            if (!isDragging)
+            if (!dragController.IsDragging)
             {
                 collapseTimer.Stop();
                 collapseTimer.Start();
@@ -118,7 +133,8 @@ namespace DearNotes.Views
         {
             collapseTimer.Stop();
 
-            if (!IsMouseOver && !isDragging) viewModel.SetExpanded(false);
+            if (!IsMouseOver && !dragController.IsDragging)
+                viewModel.SetExpanded(false);
         }
 
         private void AnimateFan(bool expanded)
@@ -199,7 +215,7 @@ namespace DearNotes.Views
         {
             e.Handled = true;
 
-            if (isDragging) return;
+            if (dragController.IsDragging) return;
 
             collapseTimer.Stop();
             viewModel.SetExpanded(true);
@@ -326,7 +342,7 @@ namespace DearNotes.Views
             layout.SetDeskWidth(
                 width,
                 viewModel.IsOnRight,
-                isDragging,
+                dragController.IsDragging,
                 isWindowReady: windowSource is not null);
         }
 
@@ -379,190 +395,6 @@ namespace DearNotes.Views
             layout.PositionNoteCards(viewModel.IsOnRight);
         }
 
-        private bool MoveDeskWithMouse()
-        {
-            if (!TryGetMousePosition(out Point mouse)) return false;
-
-            try
-            {
-                Rect bounds = screenService.GetWindowBounds(this);
-
-                Point position = DeskGeometry.ComputeDragPosition(
-                    mouse,
-                    bounds,
-                    dragAnchor);
-
-                return screenService.TryMoveWindow(
-                    this,
-                    position.X,
-                    position.Y);
-            }
-            catch (Exception ex) when (
-                ex is Win32Exception ||
-                ex is InvalidOperationException)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    "Desk: não foi possível mover o Desk: " +
-                    ex.Message);
-
-                return false;
-            }
-        }
-
-        private void Pill_MouseRightButtonDown(
-            object sender,
-            MouseButtonEventArgs e)
-        {
-            e.Handled = true;
-
-            if (isDragging) return;
-
-            collapseTimer.Stop();
-            isDragging = true;
-
-            viewModel.SetExpanded(false);
-            CollapseImmediately();
-
-            if (!TryUpdateDragAnchor())
-            {
-                isDragging = false;
-                return;
-            }
-
-            if (!PillHandle.CaptureMouse())
-            {
-                isDragging = false;
-            }
-        }
-
-        private bool TryUpdateDragAnchor()
-        {
-            if (!TryGetMousePosition(out Point mouse)) return false;
-
-            try
-            {
-                Rect bounds = screenService.GetWindowBounds(this);
-
-                dragAnchor = new Point(
-                    Math.Clamp(
-                        (mouse.X - bounds.Left) /
-                        Math.Max(1, bounds.Width),
-                        0,
-                        1),
-                    Math.Clamp(
-                        (mouse.Y - bounds.Top) /
-                        Math.Max(1, bounds.Height),
-                        0,
-                        1));
-
-                return true;
-            }
-            catch (Exception ex) when (
-                ex is Win32Exception ||
-                ex is InvalidOperationException)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"Desk: não foi possível iniciar o arraste: {ex.Message}");
-
-                return false;
-            }
-        }
-
-        private void Pill_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (!isDragging) return;
-
-            if (e.RightButton != MouseButtonState.Pressed)
-            {
-                FinishPillDrag();
-                return;
-            }
-
-            if (!MoveDeskWithMouse())
-            {
-                FinishPillDrag();
-                return;
-            }
-
-            e.Handled = true;
-        }
-
-        private void Pill_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (!isDragging) return;
-
-            e.Handled = true;
-            FinishPillDrag();
-        }
-
-        private void Pill_LostMouseCapture(object sender, MouseEventArgs e)
-        {
-            if (isDragging && !PillHandle.IsMouseCaptured) FinishPillDrag();
-        }
-
-        private void FinishPillDrag()
-        {
-            if (!isDragging) return;
-
-            isDragging = false;
-
-            if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
-
-            if (!TryGetMousePosition(out Point mouse)) return;
-
-            DeskScreen? nextScreen = TryFindScreen(
-                () => screenService.FromPoint(mouse));
-
-            if (nextScreen is null) return;
-
-            layout.SetCurrentScreen(nextScreen);
-
-            viewModel.SetSide(
-                DeskGeometry.IsOnRightSide(
-                    nextScreen.WorkArea,
-                    mouse.X));
-
-            layout.UpdateSideLayout(viewModel.IsOnRight);
-            layout.SnapToEdge(viewModel.IsOnRight);
-            layout.SavePosition(viewModel.IsOnRight);
-        }
-
-        private bool TryGetMousePosition(out Point mouse)
-        {
-            try
-            {
-                mouse = screenService.GetMousePosition();
-                return true;
-            }
-            catch (Win32Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    "Desk: não foi possível obter a posição do cursor: " +
-                    ex.Message);
-
-                mouse = default;
-                return false;
-            }
-        }
-
-        private static DeskScreen? TryFindScreen(Func<DeskScreen> findScreen)
-        {
-            try
-            {
-                return findScreen();
-            }
-            catch (Exception ex) when (
-                ex is Win32Exception ||
-                ex is InvalidOperationException)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    "Desk: não foi possível atualizar o monitor: " +
-                    ex.Message);
-
-                return null;
-            }
-        }
-
         private void ViewModel_PropertyChanged(
             object? sender,
             PropertyChangedEventArgs e)
@@ -577,7 +409,7 @@ namespace DearNotes.Views
                     break;
 
                 case nameof(DeskViewModel.IsExpanded):
-                    if (isDragging || (!viewModel.IsExpanded && NoteTabs.Visibility == Visibility.Collapsed))
+                    if (dragController.IsDragging || (!viewModel.IsExpanded && NoteTabs.Visibility == Visibility.Collapsed))
                     {
                         CollapseImmediately();
                     }
@@ -634,15 +466,13 @@ namespace DearNotes.Views
 
             double verticalPosition = layout.VerticalPosition;
 
-            DeskScreen? nextScreen = TryFindScreen(
+            DeskScreen? nextScreen = DeskLayoutService.TryResolveScreen(
                 () => screenService.FindOrPrimary(
                     screen.DeviceName));
 
             if (nextScreen is null) return;
 
-            isDragging = false;
-
-            if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
+            dragController.Cancel();
 
             collapseTimer.Stop();
             layout.SetCurrentScreen(nextScreen);
@@ -673,13 +503,13 @@ namespace DearNotes.Views
                         windowSource is null ||
                         layout.CurrentScreen is not DeskScreen screen) return;
 
-                    if (isDragging)
+                    if (dragController.IsDragging)
                     {
-                        MoveDeskWithMouse();
+                        dragController.MoveWithMouse();
                         return;
                     }
 
-                    DeskScreen? nextScreen = TryFindScreen(
+                    DeskScreen? nextScreen = DeskLayoutService.TryResolveScreen(
                         () => screenService.FindOrPrimary(
                             screen.DeviceName));
 
