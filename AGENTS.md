@@ -51,7 +51,8 @@ DearNotes/
     Theme.xaml              # Paleta de brushes compartilhada, carregada em App.xaml
   Views/
     MainWindow.xaml(.cs)    # Lista, busca e editor da janela principal
-    DeskWindow.xaml(.cs)    # Pílula lateral, leque, arraste e posicionamento
+    DeskWindow.xaml(.cs)    # Pílula lateral, leque, arraste e eventos da janela
+    DeskLayoutService.cs    # Estado de posicionamento e disposição do Desk
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
   Services/
     NotesRepository.cs      # Coleção compartilhada, autosave e eventos
@@ -114,6 +115,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 - **Envelope versionado:** mudanças no envelope exigem incremento de `ProtectedNotesFile.CurrentFormatVersion`, migração dos arquivos existentes (incluindo os cifrados), testes com o formato anterior e atualização do README. O `SchemaVersion` interno continua versionando o documento de notas.
 - **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
 - **Geometria testável:** cálculos de encaixe, lado, posição normalizada e centralização do editor ficam em `DeskGeometry`, sem depender de janelas. Não duplique essa matemática no code-behind.
+- **Layout do Desk:** o estado de posicionamento (monitor atual, lado, largura e posição vertical), o encaixe e a disposição dos cards ficam em `DeskLayoutService`. O code-behind da janela apenas encaminha eventos para esse serviço.
 - **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`, atrás de `IScreenService`. Code-behind não deve importar `user32.dll` diretamente. Verifique o retorno das APIs, valide identificadores de janela e use `TryMoveWindow`/`TrySetWindowBounds` para posicionamento; falhas esperadas são registradas em log de depuração e não devem derrubar o aplicativo. Callbacks nativos não podem lançar exceções.
 - **DPI por monitor:** use `DeskScreen.Dpi`, consultado via `GetDpiForMonitor`, nos cálculos de posicionamento. Não dependa da DPI atual da janela antes de ela estar no monitor de destino; atualize a geometria em `OnDpiChanged` e em mudanças de monitor.
 - **Testes:** comportamento novo em `DeskGeometry`, nos stores ou em regras do Core exige teste em `DearNotes.Tests`. Testes de IO usam `TemporaryDirectory` e nunca tocam em `%LocalAppData%`. Casos de monitores estreitos, margens maiores que a área útil e limites de DPI devem ser cobertos pela geometria pura.

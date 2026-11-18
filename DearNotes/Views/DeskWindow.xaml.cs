@@ -2,7 +2,6 @@ using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -20,8 +19,6 @@ namespace DearNotes.Views
 
         private const double ExpandedWidth = DeskGeometry.ExpandedWidth;
 
-        private double currentVerticalPosition = 0.5;
-
         private const int WmDisplayChange = 0x007E;
 
         private const int WmSettingChange = 0x001A;
@@ -32,7 +29,7 @@ namespace DearNotes.Views
 
         private readonly IScreenService screenService;
 
-        private readonly IDeskPositionStore positionStore;
+        private readonly DeskLayoutService layout;
 
         private bool isDragging;
 
@@ -42,15 +39,9 @@ namespace DearNotes.Views
 
         private Point dragAnchor;
 
-        private double requestedDeskWidth = CollapsedWidth;
-
         private int dpiUpdateVersion;
 
-        private DeskScreen? currentScreen;
-
         private HwndSource? windowSource;
-
-        private readonly double preferredHeight;
 
         private readonly DispatcherTimer collapseTimer =
             new DispatcherTimer
@@ -70,11 +61,17 @@ namespace DearNotes.Views
         {
             InitializeComponent();
 
-            preferredHeight = Height;
-
             this.viewModel = viewModel;
             this.screenService = screenService;
-            this.positionStore = positionStore;
+
+            layout = new DeskLayoutService(
+                this,
+                PillHandle,
+                NoteTabs,
+                screenService,
+                positionStore,
+                Height);
+
             DataContext = viewModel;
 
             collapseTimer.Tick += CollapseTimer_Tick;
@@ -89,25 +86,18 @@ namespace DearNotes.Views
         {
             System.Diagnostics.Debug.WriteLine("Desk: janela carregada.");
 
-            DeskPosition position = positionStore.Load();
+            DeskPosition position = layout.Initialize();
 
-            currentScreen = screenService.FindOrPrimary(position.MonitorDeviceName);
+            if (layout.CurrentScreen is not DeskScreen screen) return;
 
             System.Diagnostics.Debug.WriteLine(
-                $"Desk: monitor = {currentScreen.DeviceName}, " +
-                $"escala = {currentScreen.Dpi.DpiScaleX * 100:0}%");
-
-            Rect area = currentScreen.WorkArea;
-
-            screenService.TryMoveWindow(
-                this,
-                area.Left,
-                area.Top);
+                $"Desk: monitor = {screen.DeviceName}, " +
+                $"escala = {screen.Dpi.DpiScaleX * 100:0}%");
 
             viewModel.SetSide(position.IsOnRight);
 
-            UpdateSideLayout();
-            SnapToEdge(position.VerticalPosition);
+            layout.UpdateSideLayout(viewModel.IsOnRight);
+            layout.SnapToEdge(viewModel.IsOnRight, position.VerticalPosition);
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
@@ -215,55 +205,6 @@ namespace DearNotes.Views
             viewModel.SetExpanded(true);
         }
 
-        private void UpdateSideLayout()
-        {
-            PillHandle.HorizontalAlignment = viewModel.IsOnRight
-                ? HorizontalAlignment.Right
-                : HorizontalAlignment.Left;
-
-            NoteTabs.HorizontalAlignment = viewModel.IsOnRight
-                ? HorizontalAlignment.Right
-                : HorizontalAlignment.Left;
-
-            NoteTabs.Margin = new Thickness(0);
-
-            PositionNoteCards();
-        }
-
-        private void SnapToEdge(double? verticalPosition = null, double? widthInDips = null)
-        {
-            if (currentScreen is null) return;
-
-            DpiScale dpi = currentScreen.Dpi;
-
-            Rect bounds = screenService.GetWindowBounds(this);
-
-            Rect target = DeskGeometry.ComputeSnapBounds(
-                currentScreen.WorkArea,
-                dpi,
-                widthInDips ?? requestedDeskWidth,
-                preferredHeight,
-                viewModel.IsOnRight,
-                verticalPosition,
-                bounds.Top);
-
-            if (!screenService.TrySetWindowBounds(
-                    this,
-                    target.Left,
-                    target.Top,
-                    target.Width,
-                    target.Height))
-            {
-                return;
-            }
-
-            currentVerticalPosition = DeskGeometry.ComputeNormalizedTop(
-                currentScreen.WorkArea,
-                target,
-                dpi,
-                verticalPosition ?? currentVerticalPosition);
-        }
-
         protected override void OnClosed(EventArgs e)
         {
             ++dpiUpdateVersion;
@@ -332,7 +273,8 @@ namespace DearNotes.Views
         private void DeskNotes_CollectionChanged(
             object? sender, NotifyCollectionChangedEventArgs e)
         {
-            Dispatcher.BeginInvoke(new Action(PositionNoteCards));
+            Dispatcher.BeginInvoke(
+                new Action(() => layout.PositionNoteCards(viewModel.IsOnRight)));
         }
 
         private static void Animate(
@@ -381,53 +323,23 @@ namespace DearNotes.Views
 
         private void SetDeskWidth(double width)
         {
-            requestedDeskWidth = width;
-
-            if (windowSource is null)
-            {
-                Width = width;
-                return;
-            }
-
-            if (isDragging || currentScreen is null)
-            {
-                Rect bounds = screenService.GetWindowBounds(this);
-
-                DpiScale dpi = currentScreen?.Dpi ??
-                    VisualTreeHelper.GetDpi(this);
-
-                double widthPixels = Math.Max(
-                    1,
-                    Math.Round(width * dpi.DpiScaleX));
-
-                double left = viewModel.IsOnRight
-                    ? bounds.Right - widthPixels
-                    : bounds.Left;
-
-                screenService.TrySetWindowBounds(
-                    this,
-                    left,
-                    bounds.Top,
-                    widthPixels,
-                    bounds.Height);
-            }
-            else
-            {
-                SnapToEdge(currentVerticalPosition, width);
-            }
-
-            UpdateLayout();
+            layout.SetDeskWidth(
+                width,
+                viewModel.IsOnRight,
+                isDragging,
+                isWindowReady: windowSource is not null);
         }
 
         private void ShowEditor()
         {
-            if (viewModel.OpenedNote is null || currentScreen is null) return;
+            if (viewModel.OpenedNote is null ||
+                layout.CurrentScreen is not DeskScreen screen) return;
 
             if (editorWindow is null)
             {
                 editorWindow = new NoteEditorWindow(
                     viewModel,
-                    currentScreen,
+                    screen,
                     screenService);
                 editorWindow.Closed += EditorWindow_Closed;
                 editorWindow.Show();
@@ -464,72 +376,7 @@ namespace DearNotes.Views
 
         private void NoteContainer_Loaded(object sender, RoutedEventArgs e)
         {
-            PositionNoteCards();
-        }
-
-        private void PositionNoteCards()
-        {
-            const double spacing = 58;
-            const double cardHeight = 160;
-            const double padding = 12;
-            const double maxAngle = 2;
-            const double maxOffset = 4;
-
-            int count = NoteTabs.Items.Count;
-
-            NoteTabs.Height =
-                Math.Max(0, count - 1) * spacing
-                + cardHeight
-                + padding * 2;
-
-            double direction = viewModel.IsOnRight ? -1 : 1;
-
-            for (int i = 0; i < count; i++)
-            {
-                var container =
-                    NoteTabs.ItemContainerGenerator
-                        .ContainerFromIndex(i) as ContentPresenter;
-
-                if (container is null)
-                    continue;
-
-                double progress = count <= 1
-                    ? 0.5
-                    : (double)i / (count - 1);
-
-                double angle = count <= 1
-                    ? 0
-                    : (progress * 2 - 1) * maxAngle;
-
-                double offset = count <= 1
-                    ? 0
-                    : progress * maxOffset;
-
-                container.Tag = angle * direction;
-
-                Canvas.SetLeft(container, 4 + offset * direction);
-                Canvas.SetTop(container, padding + i * spacing);
-            }
-        }
-
-        private void SaveDeskPosition()
-        {
-            if (currentScreen is null) return;
-
-            Rect bounds = screenService.GetWindowBounds(this);
-
-            DpiScale dpi = currentScreen.Dpi;
-
-            positionStore.Save(new DeskPosition
-            {
-                MonitorDeviceName = currentScreen.DeviceName,
-                IsOnRight = viewModel.IsOnRight,
-                VerticalPosition = DeskGeometry.ComputeNormalizedTop(
-                    currentScreen.WorkArea,
-                    bounds,
-                    dpi,
-                    fallback: 0.5)
-            });
+            layout.PositionNoteCards(viewModel.IsOnRight);
         }
 
         private bool MoveDeskWithMouse()
@@ -668,16 +515,16 @@ namespace DearNotes.Views
 
             if (nextScreen is null) return;
 
-            currentScreen = nextScreen;
+            layout.SetCurrentScreen(nextScreen);
 
             viewModel.SetSide(
                 DeskGeometry.IsOnRightSide(
-                    currentScreen.WorkArea,
+                    nextScreen.WorkArea,
                     mouse.X));
 
-            UpdateSideLayout();
-            SnapToEdge();
-            SaveDeskPosition();
+            layout.UpdateSideLayout(viewModel.IsOnRight);
+            layout.SnapToEdge(viewModel.IsOnRight);
+            layout.SavePosition(viewModel.IsOnRight);
         }
 
         private bool TryGetMousePosition(out Point mouse)
@@ -742,8 +589,8 @@ namespace DearNotes.Views
                     break;
 
                 case nameof(DeskViewModel.IsOnRight):
-                    UpdateSideLayout();
-                    SnapToEdge();
+                    layout.UpdateSideLayout(viewModel.IsOnRight);
+                    layout.SnapToEdge(viewModel.IsOnRight);
                     break;
             }
         }
@@ -783,13 +630,13 @@ namespace DearNotes.Views
         {
             screenChangeTimer.Stop();
 
-            if (currentScreen is null) return;
+            if (layout.CurrentScreen is not DeskScreen screen) return;
 
-            double verticalPosition = currentVerticalPosition;
+            double verticalPosition = layout.VerticalPosition;
 
             DeskScreen? nextScreen = TryFindScreen(
                 () => screenService.FindOrPrimary(
-                    currentScreen.DeviceName));
+                    screen.DeviceName));
 
             if (nextScreen is null) return;
 
@@ -798,14 +645,14 @@ namespace DearNotes.Views
             if (PillHandle.IsMouseCaptured) PillHandle.ReleaseMouseCapture();
 
             collapseTimer.Stop();
-            currentScreen = nextScreen;
+            layout.SetCurrentScreen(nextScreen);
 
             viewModel.CloseNote();
             viewModel.SetExpanded(false);
             CollapseImmediately();
 
-            UpdateSideLayout();
-            SnapToEdge(verticalPosition);
+            layout.UpdateSideLayout(viewModel.IsOnRight);
+            layout.SnapToEdge(viewModel.IsOnRight, verticalPosition);
         }
 
         protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -819,10 +666,12 @@ namespace DearNotes.Views
 
             int version = ++dpiUpdateVersion;
 
-
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
                 {
-                    if (version != dpiUpdateVersion || !IsLoaded || windowSource is null || currentScreen is null) return;
+                    if (version != dpiUpdateVersion ||
+                        !IsLoaded ||
+                        windowSource is null ||
+                        layout.CurrentScreen is not DeskScreen screen) return;
 
                     if (isDragging)
                     {
@@ -832,15 +681,16 @@ namespace DearNotes.Views
 
                     DeskScreen? nextScreen = TryFindScreen(
                         () => screenService.FindOrPrimary(
-                            currentScreen.DeviceName));
+                            screen.DeviceName));
 
                     if (nextScreen is null) return;
 
-                    currentScreen = nextScreen;
+                    layout.SetCurrentScreen(nextScreen);
 
-                    SnapToEdge(
-                        currentVerticalPosition,
-                        requestedDeskWidth);
+                    layout.SnapToEdge(
+                        viewModel.IsOnRight,
+                        layout.VerticalPosition,
+                        layout.RequestedWidth);
                 }));
         }
     }
