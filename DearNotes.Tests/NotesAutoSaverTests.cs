@@ -50,6 +50,43 @@ namespace DearNotes.Tests
         }
 
         [Fact]
+        public async Task FlushAsync_WhenStoreThrowsUnexpectedException_ReleasesWaitersAndKeepsSaving()
+        {
+            var store = new RecordingNoteStore
+            {
+                Failure = new InvalidOperationException("falha inesperada")
+            };
+
+            var saver = new NotesAutoSaver(store);
+            var failureReported =
+                new TaskCompletionSource<Exception>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+
+            saver.SaveFailed += exception =>
+                failureReported.TrySetResult(exception);
+
+            bool failedSave = await saver
+                .FlushAsync(CreateNotes("Falha"))
+                .WaitAsync(testTimeout);
+
+            Exception reportedFailure = await failureReported
+                .Task
+                .WaitAsync(testTimeout);
+
+            Assert.False(failedSave);
+            Assert.IsType<InvalidOperationException>(reportedFailure);
+
+            store.Failure = null;
+
+            bool nextSave = await saver
+                .FlushAsync(CreateNotes("Recuperada"))
+                .WaitAsync(testTimeout);
+
+            Assert.True(nextSave);
+            Assert.Equal("Recuperada", store.Saved[^1][0].Title);
+        }
+
+        [Fact]
         public async Task Enqueue_WhileSaving_WritesOnlyLatestPendingSnapshot()
         {
             var store = new RecordingNoteStore
@@ -133,7 +170,7 @@ namespace DearNotes.Tests
 
             public bool BlockFirstSave { get; init; }
 
-            public Exception? Failure { get; init; }
+            public Exception? Failure { get; set; }
 
             public Task FirstSaveStarted => firstSaveStarted.Task;
 
