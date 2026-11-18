@@ -39,6 +39,8 @@ Directory.Build.props       # Analisadores no nível mais recente e avisos como 
 .gitattributes              # Normalização de fim de linha (CRLF na cópia de trabalho)
 .github/
   workflows/ci.yml          # Formatação, build e testes no Windows
+.opencode/
+  skills/                   # Skills locais do OpenCode (instruções para agentes)
 DearNotes/
   App.xaml, App.xaml.cs     # Composition root: criptografia, repositório, VMs e janelas
   app.manifest              # asInvoker + reconhecimento de DPI por monitor (PerMonitorV2)
