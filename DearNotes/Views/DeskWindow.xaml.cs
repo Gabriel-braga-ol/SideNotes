@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using DearNotes.Models;
 using DearNotes.Services;
@@ -15,10 +14,6 @@ namespace DearNotes.Views
 {
     public partial class DeskWindow : Window
     {
-        private const double CollapsedWidth = DeskGeometry.CollapsedWidth;
-
-        private const double ExpandedWidth = DeskGeometry.ExpandedWidth;
-
         private const int WmDisplayChange = 0x007E;
 
         private const int WmSettingChange = 0x001A;
@@ -33,19 +28,13 @@ namespace DearNotes.Views
 
         private readonly DeskDragController dragController;
 
-        private int fanAnimationVersion;
+        private readonly DeskFanAnimator fanAnimator;
 
         private NoteEditorWindow? editorWindow;
 
         private int dpiUpdateVersion;
 
         private HwndSource? windowSource;
-
-        private readonly DispatcherTimer collapseTimer =
-            new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(450)
-            };
 
         private readonly DispatcherTimer screenChangeTimer = new()
         {
@@ -76,8 +65,17 @@ namespace DearNotes.Views
                 screenService,
                 layout,
                 PillHandle,
-                collapseTimer.Stop,
-                CollapseImmediately);
+                StopCollapseTimer,
+                CollapseFan);
+
+            fanAnimator = new DeskFanAnimator(
+                viewModel,
+                DeskRoot,
+                PillHandle,
+                NoteTabs,
+                SetDeskWidth,
+                () => IsMouseOver,
+                IsDragActive);
 
             PillHandle.MouseRightButtonDown +=
                 dragController.HandleMouseRightButtonDown;
@@ -87,9 +85,11 @@ namespace DearNotes.Views
             PillHandle.LostMouseCapture +=
                 dragController.HandleLostMouseCapture;
 
+            MouseEnter += (_, _) => fanAnimator.HandleMouseEnter();
+            MouseLeave += (_, _) => fanAnimator.HandleMouseLeave();
+
             DataContext = viewModel;
 
-            collapseTimer.Tick += CollapseTimer_Tick;
             screenChangeTimer.Tick += ScreenChangeTimer_Tick;
 
             viewModel.DeskNotes.CollectionChanged += DeskNotes_CollectionChanged;
@@ -115,100 +115,6 @@ namespace DearNotes.Views
             layout.SnapToEdge(viewModel.IsOnRight, position.VerticalPosition);
         }
 
-        private void Window_MouseEnter(object sender, MouseEventArgs e)
-        {
-            collapseTimer.Stop();
-        }
-
-        private void Window_MouseLeave(object sender, MouseEventArgs e)
-        {
-            if (!dragController.IsDragging)
-            {
-                collapseTimer.Stop();
-                collapseTimer.Start();
-            }
-        }
-
-        private void CollapseTimer_Tick(object? sender, EventArgs e)
-        {
-            collapseTimer.Stop();
-
-            if (!IsMouseOver && !dragController.IsDragging)
-                viewModel.SetExpanded(false);
-        }
-
-        private void AnimateFan(bool expanded)
-        {
-            if (expanded)
-            {
-                PillHandle.Opacity = 0;
-                PillHandle.IsHitTestVisible = false;
-
-                SetDeskWidth(ExpandedWidth);
-            }
-
-            int version = ++fanAnimationVersion;
-
-            var transform =
-                (TranslateTransform)NoteTabs.RenderTransform;
-
-            double hiddenOffset = viewModel.IsOnRight ? 36 : -36;
-
-            if (expanded)
-            {
-                if (NoteTabs.Visibility != Visibility.Visible)
-                {
-                    NoteTabs.Opacity = 0;
-                    transform.X = hiddenOffset;
-                    NoteTabs.Visibility = Visibility.Visible;
-                }
-
-                NoteTabs.IsHitTestVisible = true;
-                DeskRoot.Background = Brushes.Transparent;
-
-                Animate(
-                    transform,
-                    TranslateTransform.XProperty,
-                    0,
-                    280);
-
-                Animate(
-                    NoteTabs,
-                    UIElement.OpacityProperty,
-                    1,
-                    180);
-            }
-            else
-            {
-                NoteTabs.IsHitTestVisible = false;
-
-                Animate(
-                    transform,
-                    TranslateTransform.XProperty,
-                    hiddenOffset,
-                    200);
-
-                Animate(
-                    NoteTabs,
-                    UIElement.OpacityProperty,
-                    0,
-                    200,
-                    () =>
-                    {
-                        if (version != fanAnimationVersion ||
-                            viewModel.IsExpanded) return;
-
-                        NoteTabs.Visibility = Visibility.Collapsed;
-                        DeskRoot.Background = null;
-
-                        SetDeskWidth(CollapsedWidth);
-
-                        PillHandle.Opacity = 1;
-                        PillHandle.IsHitTestVisible = true;
-                    });
-            }
-        }
-
         private void Pill_MouseLeftButtonDown(
             object sender,
             MouseButtonEventArgs e)
@@ -217,17 +123,15 @@ namespace DearNotes.Views
 
             if (dragController.IsDragging) return;
 
-            collapseTimer.Stop();
+            fanAnimator.StopCollapseTimer();
             viewModel.SetExpanded(true);
         }
 
         protected override void OnClosed(EventArgs e)
         {
             ++dpiUpdateVersion;
-            ++fanAnimationVersion;
 
-            collapseTimer.Stop();
-            collapseTimer.Tick -= CollapseTimer_Tick;
+            fanAnimator.Detach();
 
             viewModel.DeskNotes.CollectionChanged -= DeskNotes_CollectionChanged;
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
@@ -252,38 +156,13 @@ namespace DearNotes.Views
                 element.DataContext is not Note note) return;
 
             e.Handled = true;
-            collapseTimer.Stop();
+            fanAnimator.StopCollapseTimer();
 
             bool alreadyOpened = ReferenceEquals(viewModel.OpenedNote, note);
 
             viewModel.OpenNote(note);
 
             if (alreadyOpened) ShowEditor();
-        }
-
-        private void CollapseImmediately()
-        {
-            ++fanAnimationVersion;
-
-            NoteTabs.BeginAnimation(
-                UIElement.OpacityProperty, null);
-
-            var transform =
-                (TranslateTransform)NoteTabs.RenderTransform;
-
-            transform.BeginAnimation(
-                TranslateTransform.XProperty, null);
-
-            NoteTabs.Opacity = 0;
-            NoteTabs.IsHitTestVisible = false;
-            NoteTabs.Visibility = Visibility.Collapsed;
-
-            DeskRoot.Background = null;
-
-            SetDeskWidth(CollapsedWidth);
-
-            PillHandle.Opacity = 1;
-            PillHandle.IsHitTestVisible = true;
         }
 
         private void DeskNotes_CollectionChanged(
@@ -293,50 +172,6 @@ namespace DearNotes.Views
                 new Action(() => layout.PositionNoteCards(viewModel.IsOnRight)));
         }
 
-        private static void Animate(
-            DependencyObject target,
-            DependencyProperty property,
-            double destination,
-            int milliseconds,
-            Action? completed = null)
-        {
-            double current = (double)target.GetValue(property);
-
-            target.SetValue(property, destination);
-
-            var animation = new DoubleAnimation
-            {
-                From = current,
-                To = destination,
-                Duration = TimeSpan.FromMilliseconds(milliseconds),
-                FillBehavior = FillBehavior.Stop,
-                EasingFunction = new CubicEase
-                {
-                    EasingMode = EasingMode.EaseOut
-                }
-            };
-
-            if (completed is not null)
-            {
-                animation.Completed += (_, _) => completed();
-            }
-
-            if (target is UIElement element)
-            {
-                element.BeginAnimation(
-                    property,
-                    animation,
-                    HandoffBehavior.SnapshotAndReplace);
-            }
-            else if (target is Animatable animatable)
-            {
-                animatable.BeginAnimation(
-                    property,
-                    animation,
-                    HandoffBehavior.SnapshotAndReplace);
-            }
-        }
-
         private void SetDeskWidth(double width)
         {
             layout.SetDeskWidth(
@@ -344,6 +179,21 @@ namespace DearNotes.Views
                 viewModel.IsOnRight,
                 dragController.IsDragging,
                 isWindowReady: windowSource is not null);
+        }
+
+        private void StopCollapseTimer()
+        {
+            fanAnimator.StopCollapseTimer();
+        }
+
+        private void CollapseFan()
+        {
+            fanAnimator.CollapseImmediately();
+        }
+
+        private bool IsDragActive()
+        {
+            return dragController.IsDragging;
         }
 
         private void ShowEditor()
@@ -409,15 +259,7 @@ namespace DearNotes.Views
                     break;
 
                 case nameof(DeskViewModel.IsExpanded):
-                    if (dragController.IsDragging || (!viewModel.IsExpanded && NoteTabs.Visibility == Visibility.Collapsed))
-                    {
-                        CollapseImmediately();
-                    }
-                    else
-                    {
-                        AnimateFan(viewModel.IsExpanded);
-                    }
-
+                    fanAnimator.ApplyExpandedState();
                     break;
 
                 case nameof(DeskViewModel.IsOnRight):
@@ -474,12 +316,12 @@ namespace DearNotes.Views
 
             dragController.Cancel();
 
-            collapseTimer.Stop();
+            fanAnimator.StopCollapseTimer();
             layout.SetCurrentScreen(nextScreen);
 
             viewModel.CloseNote();
             viewModel.SetExpanded(false);
-            CollapseImmediately();
+            fanAnimator.CollapseImmediately();
 
             layout.UpdateSideLayout(viewModel.IsOnRight);
             layout.SnapToEdge(viewModel.IsOnRight, verticalPosition);

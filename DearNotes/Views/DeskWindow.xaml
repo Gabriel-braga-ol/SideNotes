@@ -13,8 +13,6 @@
         ShowActivated="False"
         Topmost="False"
         Loaded="Window_Loaded"
-        MouseEnter="Window_MouseEnter"
-        MouseLeave="Window_MouseLeave"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
