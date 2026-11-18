@@ -134,77 +134,115 @@ namespace DearNotes.Services
                 isPumping = true;
             }
 
-            _ = Task.Run(PumpAsync);
+            _ = Task.Run(Pump);
         }
 
-        private async Task PumpAsync()
+        private void Pump()
         {
-            while (true)
+            Exception? unexpectedFailure = null;
+
+            try
             {
-                SaveRequest? request;
+                while (true)
+                {
+                    SaveRequest? request = TakePendingRequest();
 
+                    if (request is null) break;
+
+                    if (!WriteRequest(request)) break;
+                }
+            }
+            catch (Exception failure)
+            {
+                // TryWrite cobre as falhas esperadas de IO. Sem este limite, uma falha
+                // inesperada deixaria a fila presa e o encerramento aguardaria para sempre.
+                unexpectedFailure = failure;
+            }
+
+            bool hasPendingRequest = StopPump(unexpectedFailure);
+
+            if (hasPendingRequest)
+            {
+                StartPumpIfIdle();
+            }
+
+            if (unexpectedFailure is not null)
+            {
+                SaveFailed?.Invoke(unexpectedFailure);
+            }
+        }
+
+        private SaveRequest? TakePendingRequest()
+        {
+            lock (syncRoot)
+            {
+                if (isDisposed) return null;
+
+                SaveRequest? request = pendingRequest;
+                pendingRequest = null;
+
+                return request;
+            }
+        }
+
+        private bool WriteRequest(SaveRequest request)
+        {
+            if (TryWrite(request, out Exception? failure))
+            {
                 lock (syncRoot)
                 {
-                    if (isDisposed)
-                    {
-                        isPumping = false;
-                        return;
-                    }
+                    lastSavedVersion = Math.Max(
+                        lastSavedVersion,
+                        request.Version);
 
-                    request = pendingRequest;
-                    pendingRequest = null;
+                    CompleteWaiters(
+                        request.Version,
+                        success: true);
                 }
 
-                if (request is null)
+                SaveSucceeded?.Invoke();
+
+                return true;
+            }
+
+            bool retryPendingFlush;
+
+            lock (syncRoot)
+            {
+                retryPendingFlush = pendingRequest is { IsFlush: true };
+            }
+
+            if (failure is not null)
+            {
+                SaveFailed?.Invoke(failure);
+            }
+
+            if (retryPendingFlush) return true;
+
+            lock (syncRoot)
+            {
+                CompleteAllWaiters(success: false);
+            }
+
+            return false;
+        }
+
+        private bool StopPump(Exception? unexpectedFailure)
+        {
+            lock (syncRoot)
+            {
+                isPumping = false;
+
+                if (unexpectedFailure is null)
                 {
-                    lock (syncRoot)
-                    {
-                        if (pendingRequest is null)
-                        {
-                            isPumping = false;
-                            return;
-                        }
-                    }
-
-                    continue;
+                    return !isDisposed && pendingRequest is not null;
                 }
 
-                if (TryWrite(request, out Exception? failure))
-                {
-                    lock (syncRoot)
-                    {
-                        lastSavedVersion = Math.Max(
-                            lastSavedVersion,
-                            request.Version);
+                // Repetir a mesma falha inesperada entraria em laço; o pendente é descartado.
+                pendingRequest = null;
+                CompleteAllWaiters(success: false);
 
-                        CompleteWaiters(
-                            request.Version,
-                            success: true);
-                    }
-
-                    SaveSucceeded?.Invoke();
-                    continue;
-                }
-
-                bool retryPendingFlush;
-
-                lock (syncRoot)
-                {
-                    retryPendingFlush = pendingRequest is { IsFlush: true };
-
-                    if (!retryPendingFlush)
-                    {
-                        CompleteAllWaiters(success: false);
-                        isPumping = false;
-                    }
-                }
-
-                if (failure is not null)
-                {
-                    SaveFailed?.Invoke(failure);
-                }
-
-                if (!retryPendingFlush) return;
+                return false;
             }
         }
 
