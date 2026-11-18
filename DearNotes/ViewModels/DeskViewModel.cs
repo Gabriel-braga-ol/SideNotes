@@ -11,7 +11,7 @@ namespace DearNotes.ViewModels
 {
     public sealed class DeskViewModel : INotifyPropertyChanged, IDisposable
     {
-        private readonly NotesRepository repository;
+        private readonly INotesRepository repository;
 
         private Note? openedNote;
         private bool isExpanded;
@@ -29,7 +29,7 @@ namespace DearNotes.ViewModels
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public DeskViewModel(NotesRepository repository)
+        public DeskViewModel(INotesRepository repository)
         {
             this.repository = repository;
 
