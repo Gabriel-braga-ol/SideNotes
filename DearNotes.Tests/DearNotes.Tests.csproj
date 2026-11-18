@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DearNotes.Core\DearNotes.Core.csproj" />
+    <ProjectReference Include="..\DearNotes\DearNotes.csproj" />
   </ItemGroup>
 
 </Project>

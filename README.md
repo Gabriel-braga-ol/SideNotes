@@ -221,6 +221,8 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes.Tests/FixedKeyProvider.cs` | Chave fixa usada apenas nos testes para tornar a criptografia determinística e isolada do DPAPI. |
 | `DearNotes.Tests/NotesAutoSaverTests.cs` | Gravação em segundo plano, coalescência de snapshots, falhas e gravação síncrona de emergência. |
 | `DearNotes.Tests/NoteTests.cs` | Identidade, datas e independência das cópias usadas pelo autosave. |
+| `DearNotes.Tests/MainViewModelTests.cs` e `DeskViewModelTests.cs` | Busca e seleção, fixação no Desk, confirmação de fechamento, avisos e estado do leque. |
+| `DearNotes.Tests/FakeNotesRepository.cs` e `RecordingDialogService.cs` | Dublês de `INotesRepository` e `IDialogService` usados nos testes de ViewModel. |
 | `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
 | `.editorconfig` e `Directory.Build.props` | Estilo de código compartilhado, analisadores no nível mais recente e avisos tratados como erro. |

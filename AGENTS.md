@@ -95,6 +95,10 @@ DearNotes.Tests/
   DeskPositionStoreTests.cs # Testes de desk_position.json
   NotesAutoSaverTests.cs    # Testes da fila de autosave
   NoteTests.cs              # Identidade, metadados e cópia para o autosave
+  MainViewModelTests.cs     # Busca, seleção, fixação, fechamento e avisos
+  DeskViewModelTests.cs     # Notas fixadas, abertura e estado do leque
+  FakeNotesRepository.cs    # Repositório falso para os testes de ViewModel
+  RecordingDialogService.cs # Diálogos falsos para os testes de ViewModel
 ```
 
 Dados persistidos (nunca versione esses arquivos nem os trate como código):
@@ -112,7 +116,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 - **MVVM:** Models guardam dados; ViewModels guardam estado e ações; Views contêm apenas layout, bindings e comportamento visual; Services concentram IO, Win32 e regras de infraestrutura.
 - **Ações e avisos:** botões disparam `ICommand` expostos pelo ViewModel, não `Click` no code-behind. Mensagens e confirmações ao usuário passam por `IDialogService`; ViewModels e Views não chamam `MessageBox` diretamente.
 - **Tema:** cores e brushes compartilhados ficam em `Themes/Theme.xaml` e são referenciados por `StaticResource`. A cor individual da nota continua vindo dos dados (`Note.Color`).
-- **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo e os testes referenciam o Core, nunca o contrário.
+- **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo referencia o Core; os testes referenciam o Core e, para os testes de ViewModel, o projeto WPF — nunca o contrário.
 - **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
 - **Fonte única de verdade:** `NotesRepository` é a coleção compartilhada e o único ponto de autosave. Os ViewModels dependem de `INotesRepository`, não da implementação. `NotesAutoSaver` apenas executa as gravações em segundo plano; não crie timers de salvamento nem cópias da lista em ViewModels ou Views.
 - **Autosave em segundo plano:** a serialização e a escrita recebem um snapshot imutável das notas e nunca rodam na thread da interface. Uma única gravação pode estar em andamento; snapshots pendentes são substituídos pelo mais recente. Uma falha inesperada libera a fila e é comunicada como falha de gravação, para que o encerramento nunca fique esperando. Não grave notas diretamente na thread de UI.
