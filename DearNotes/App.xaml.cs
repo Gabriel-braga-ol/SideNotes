@@ -59,8 +59,16 @@ namespace DearNotes
                 var noteEncryption = new AesGcmNoteEncryption(
                     new DpapiKeyProvider(AppPaths.NotesKeyFilePath));
 
+                var noteStore = new NoteStorage(noteEncryption);
+
+                var noteAutoSaver = new NotesAutoSaver(noteStore);
+
+                Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+
                 notesRepository = new NotesRepository(
-                    new NoteStorage(noteEncryption));
+                    noteStore,
+                    noteAutoSaver,
+                    action => PostToDispatcher(dispatcher, action));
 
                 viewModel = new MainViewModel(notesRepository, dialogService);
                 deskViewModel = new DeskViewModel(notesRepository);
@@ -201,6 +209,19 @@ namespace DearNotes
             }
 
             return saved;
+        }
+
+        private static void PostToDispatcher(
+            Dispatcher dispatcher,
+            Action action)
+        {
+            if (dispatcher.HasShutdownStarted ||
+                dispatcher.HasShutdownFinished)
+            {
+                return;
+            }
+
+            dispatcher.BeginInvoke(action);
         }
 
         protected override void OnExit(ExitEventArgs e)

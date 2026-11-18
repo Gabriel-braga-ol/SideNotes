@@ -40,7 +40,7 @@ namespace DearNotes.Services
 
         private readonly NotesAutoSaver autoSaver;
 
-        private readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+        private readonly Action<Action> postToUi;
 
         private readonly HashSet<Note> trackedNotes = new();
 
@@ -67,9 +67,18 @@ namespace DearNotes.Services
 
         public event Action<Note, string?>? NoteChanged;
 
-        public NotesRepository(INoteStore noteStore)
+        public NotesRepository(
+            INoteStore noteStore,
+            NotesAutoSaver autoSaver,
+            Action<Action> postToUi)
         {
-            autoSaver = new NotesAutoSaver(noteStore);
+            ArgumentNullException.ThrowIfNull(noteStore);
+            ArgumentNullException.ThrowIfNull(autoSaver);
+            ArgumentNullException.ThrowIfNull(postToUi);
+
+            this.autoSaver = autoSaver;
+            this.postToUi = postToUi;
+
             autoSaver.SaveSucceeded += AutoSaver_SaveSucceeded;
             autoSaver.SaveFailed += AutoSaver_SaveFailed;
 
@@ -290,13 +299,7 @@ namespace DearNotes.Services
 
         private void PostToUi(Action action)
         {
-            if (dispatcher.HasShutdownStarted ||
-                dispatcher.HasShutdownFinished)
-            {
-                return;
-            }
-
-            dispatcher.BeginInvoke(action);
+            postToUi(action);
         }
 
         private void ScheduleRetry()
