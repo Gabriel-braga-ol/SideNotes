@@ -166,10 +166,9 @@ Atualize o **README.md** e este **AGENTS.md** no **mesmo commit** sempre que uma
 - **Não engolir exceções:** proibido usar blocos `try/catch` vazios ou capturar exceções genéricas (`Exception`, `catch (e) { }`) sem logar ou tratar adequadamente. Prefira exceções específicas com filtro `when`; quando a falha for esperada, retorne um resultado explícito.
 - **Não hardcodar valores sensíveis ou de ambiente:** nunca insira URLs, chaves de API, credenciais, portas ou caminhos absolutos locais diretamente no código. Use `AppPaths`/`Environment` para caminhos. Chaves de criptografia nunca devem ser fixas no código de produção; nos testes, use apenas as chaves fixas isoladas em `FixedKeyProvider`.
 - **Não enfraquecer a criptografia:** não remova a autenticação AES-GCM, não reutilize nonces, não grave a chave em texto puro e não trate falhas de descriptografia como arquivo vazio para forçar a abertura do aplicativo.
-- **Não misturar mudanças:** não misture refatoração, formatação e nova funcionalidade no mesmo commit.
 
 ### Git
 
 - **Não commitar direto na `main`/`master`:** antes de commitar, confirme que está em uma branch de feature/fix (`git branch --show-current`). Se não estiver, crie uma antes.
 - **Não fazer `git push` sem confirmação:** alterações ficam apenas locais até o desenvolvedor revisar o `git diff` e autorizar o envio ao remoto.
-- **Não gerar commits genéricos ou gigantes:** nunca use mensagens vagas como `fix`, `update` ou `changes`. Descreva o escopo com o padrão já usado no repositório (`feat:`, `fix:`, `refactor:`, `docs:`).
+- **Mensagens de commit:** seguem a skill local `conventional-commit-review`, que define tipo, escopo e tamanho a partir do histórico do repositório.
