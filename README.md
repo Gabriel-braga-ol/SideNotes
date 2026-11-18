@@ -28,6 +28,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Arraste da pílula com o botão direito entre monitores, encaixe nas laterais e restauração do monitor e da posição ao iniciar.
 - Recuperação do Desk no monitor principal quando a tela utilizada é desconectada.
 - Adaptação do tamanho e do posicionamento do Desk entre monitores com escalas de DPI diferentes.
+- Navegação do Desk por teclado, com foco visível, abertura e recolhimento do leque e troca de notas.
 
 ## Tecnologias
 
@@ -100,6 +101,8 @@ Criar uma nota limpa a busca ativa para que a nova anotação fique visível. Ao
 4. Edite o título e o conteúdo. A janela abre centralizada no mesmo monitor do Desk, pode ser arrastada pela barra superior e salva automaticamente, mesmo quando outra nota está selecionada na janela principal.
 5. Use o botão **✕** para fechar o editor. Sem uma nota aberta, o leque recolhe após uma pequena pausa ao retirar o mouse.
 6. Com a pílula recolhida, mantenha o botão direito pressionado e arraste para ajustar a altura, mudar de lado ou levar o Desk para outro monitor. Ao soltar, ele se encaixa na lateral da tela onde está o cursor e salva o monitor e a posição.
+
+Também é possível operar o Desk pelo teclado. Com o foco na pílula, **Enter** ou **Espaço** abre e recolhe o leque, e **Escape** o recolhe. Com o leque aberto, use **Tab** ou as setas para percorrer as notas, **Enter** ou **Espaço** para abrir a nota e **Escape** para recolher o leque e devolver o foco à pílula. O foco atual é indicado por um contorno na pílula e na aba.
 
 Uma nota aberta permanece no editor ao retirar o mouse. Desafixar ou excluir essa nota pela janela principal fecha o editor. Ao fechar a janela principal, as janelas do Desk e do editor também são fechadas.
 
@@ -194,6 +197,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Views/DeskLayoutService.cs` | Estado de posicionamento do Desk: monitor atual, lado, largura, posição vertical, encaixe, disposição dos cards e persistência da posição. |
 | `DearNotes/Views/DeskDragController.cs` | Arraste da pílula com o botão direito: captura do mouse, deslocamento, escolha do monitor, lado e recuperação de falhas do Win32. |
 | `DearNotes/Views/DeskFanAnimator.cs` | Abertura e recolhimento do leque, animações das abas, largura da janela e atraso de recolhimento ao sair do Desk. |
+| `DearNotes/Views/DeskKeyboardNavigator.cs` | Atalhos e navegação por teclado do Desk: abertura e recolhimento do leque, abertura de notas e retorno do foco à pílula. |
 | `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, posicionada no monitor atual e arrastável pela barra superior. |
 | `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, centralização do editor e posição do arraste. |
 | `DearNotes.Core/Services/NotesAutoSaver.cs` | Fila de gravação em segundo plano: mantém uma escrita por vez e substitui o snapshot pendente pelo mais recente. |
@@ -224,7 +228,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 
 `App.xaml`, `App.xaml.cs`, `AssemblyInfo.cs` e `app.manifest` permanecem na raiz do projeto WPF. O `README.md` e o `AGENTS.md` ficam na raiz do repositório.
 
-Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas. A geometria do Desk vive em `DeskGeometry`, permitindo testar o posicionamento sem abrir janelas. O `DeskLayoutService` mantém o monitor atual, a largura, a posição vertical e o encaixe, aplicando essa geometria à janela e aos cards. O `DeskDragController` cuida do arraste da pílula, da captura do mouse e da troca de monitor. O `DeskFanAnimator` centraliza a abertura e o recolhimento do leque, as animações e o atraso de recolhimento. O acesso a arquivos e telas é injetado por `INoteStore`, `IDeskPositionStore` e `IScreenService`. O `NotesAutoSaver` recebe cópias das notas, executa a gravação em segundo plano e descarta snapshots intermediários quando já existe um mais recente; ao fechar, a janela principal aguarda a fila terminar antes de encerrar.
+Os dois ViewModels utilizam a mesma instância de `NotesRepository` e os mesmos objetos `Note`. A janela do editor usa o `DeskViewModel` já existente, sem manter cópia própria das notas. O autosave fica centralizado no repositório; cada janela mantém seu próprio estado de interface. O repositório expõe o evento `NoteChanged`, usado pelo Desk para acompanhar alterações de fixação sem duplicar o acompanhamento individual das notas. A geometria do Desk vive em `DeskGeometry`, permitindo testar o posicionamento sem abrir janelas. O `DeskLayoutService` mantém o monitor atual, a largura, a posição vertical e o encaixe, aplicando essa geometria à janela e aos cards. O `DeskDragController` cuida do arraste da pílula, da captura do mouse e da troca de monitor. O `DeskFanAnimator` centraliza a abertura e o recolhimento do leque, as animações e o atraso de recolhimento. O `DeskKeyboardNavigator` concentra os atalhos e a movimentação de foco entre a pílula e as abas. O acesso a arquivos e telas é injetado por `INoteStore`, `IDeskPositionStore` e `IScreenService`. O `NotesAutoSaver` recebe cópias das notas, executa a gravação em segundo plano e descarta snapshots intermediários quando já existe um mais recente; ao fechar, a janela principal aguarda a fila terminar antes de encerrar.
 
 A criptografia também é injetada: o Core define `INoteEncryption` e `IKeyProvider`, `AesGcmNoteEncryption` implementa o envelope AES-GCM e o aplicativo WPF fornece a chave por meio de `DpapiKeyProvider`. Assim, os testes usam uma chave fixa e não dependem do DPAPI nem do perfil do Windows. A chave nunca é gravada em texto puro e é zerada da memória após cada operação de criptografia ou descriptografia.
 

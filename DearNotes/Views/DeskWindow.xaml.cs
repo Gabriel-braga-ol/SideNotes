@@ -30,6 +30,8 @@ namespace DearNotes.Views
 
         private readonly DeskFanAnimator fanAnimator;
 
+        private readonly DeskKeyboardNavigator keyboardNavigator;
+
         private NoteEditorWindow? editorWindow;
 
         private int dpiUpdateVersion;
@@ -77,6 +79,12 @@ namespace DearNotes.Views
                 () => IsMouseOver,
                 IsDragActive);
 
+            keyboardNavigator = new DeskKeyboardNavigator(
+                viewModel,
+                NoteTabs,
+                PillHandle,
+                OpenNote);
+
             PillHandle.MouseRightButtonDown +=
                 dragController.HandleMouseRightButtonDown;
             PillHandle.MouseRightButtonUp +=
@@ -123,6 +131,7 @@ namespace DearNotes.Views
 
             if (dragController.IsDragging) return;
 
+            PillHandle.Focus();
             fanAnimator.StopCollapseTimer();
             viewModel.SetExpanded(true);
         }
@@ -158,11 +167,17 @@ namespace DearNotes.Views
             e.Handled = true;
             fanAnimator.StopCollapseTimer();
 
-            bool alreadyOpened = ReferenceEquals(viewModel.OpenedNote, note);
+            OpenNote(note);
+        }
 
-            viewModel.OpenNote(note);
+        private void Pill_KeyDown(object sender, KeyEventArgs e)
+        {
+            keyboardNavigator.HandlePillKeyDown(sender, e);
+        }
 
-            if (alreadyOpened) ShowEditor();
+        private void NoteTab_KeyDown(object sender, KeyEventArgs e)
+        {
+            keyboardNavigator.HandleNoteKeyDown(sender, e);
         }
 
         private void DeskNotes_CollectionChanged(
@@ -194,6 +209,15 @@ namespace DearNotes.Views
         private bool IsDragActive()
         {
             return dragController.IsDragging;
+        }
+
+        private void OpenNote(Note note)
+        {
+            bool alreadyOpened = ReferenceEquals(viewModel.OpenedNote, note);
+
+            viewModel.OpenNote(note);
+
+            if (alreadyOpened) ShowEditor();
         }
 
         private void ShowEditor()
