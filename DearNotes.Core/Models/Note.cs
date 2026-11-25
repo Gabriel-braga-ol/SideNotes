@@ -113,6 +113,9 @@ namespace DearNotes.Models
         private void Touch()
         {
             updatedAt = DateTimeOffset.UtcNow;
+
+            // As prévias exibem a data de atualização, que muda junto com o conteúdo.
+            Notify(nameof(UpdatedAt));
         }
 
         private void Notify(string propertyName)

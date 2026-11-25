@@ -90,7 +90,12 @@ namespace DearNotes
                 return;
             }
 
-            MainWindow window = new MainWindow(viewModel);
+            var windowFrameService = new WindowFrameService();
+
+            MainWindow window = new MainWindow(
+                viewModel,
+                windowFrameService);
+
             window.Show();
 
             var screenService = new DeskScreenService();

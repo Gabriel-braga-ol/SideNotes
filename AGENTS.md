@@ -46,25 +46,31 @@ DearNotes/
   app.manifest              # asInvoker + reconhecimento de DPI por monitor (PerMonitorV2)
   AssemblyInfo.cs
   ViewModels/
-    MainViewModel.cs        # Seleção, busca, ações da janela principal
+    MainViewModel.cs        # Seleção, busca, filtro do Desk e ações da janela principal
     DeskViewModel.cs        # Notas fixadas, leque e estado do Desk
     RelayCommand.cs         # ICommand usada pelas ações dos ViewModels
   Themes/
     Theme.xaml              # Paleta de brushes compartilhada, carregada em App.xaml
   Views/
-    MainWindow.xaml(.cs)    # Lista, busca e editor da janela principal
+    MainWindow.xaml(.cs)    # Moldura, lista, busca, filtros e editor da janela principal
     DeskWindow.xaml(.cs)    # Pílula lateral, eventos e ciclo de vida da janela
     DeskLayoutService.cs    # Estado de posicionamento e disposição do Desk
     DeskDragController.cs   # Arraste da pílula, captura do mouse e monitores
     DeskFanAnimator.cs      # Leque, animações, largura e atraso de recolhimento
     DeskKeyboardNavigator.cs # Foco, atalhos e navegação por teclado do Desk
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
+    Converters/
+      RelativeTimeConverter.cs # Data de atualização como texto relativo
+      ShortDateConverter.cs  # Data local no formato curto do rodapé
+      PreviewTextConverter.cs # Prévia do conteúdo em uma única linha
+      DeskFilterConverter.cs # Estado dos chips "Todas" e "No Desk"
   Services/
     INotesRepository.cs     # Contrato da coleção compartilhada e do autosave
     NotesRepository.cs      # Coleção compartilhada, autosave e eventos
     DpapiKeyProvider.cs     # Cria/abre notes.key com DPAPI CurrentUser
     DeskScreenService.cs    # Monitores, DPI e posicionamento via Win32
     IScreenService.cs       # Contrato de acesso a monitores e janelas
+    WindowFrameService.cs   # Cantos arredondados (DWM) e maximização na área útil
     StorageMigration.cs     # Cópia única dos dados da instalação anterior
     AppLogger.cs            # Registro de falhas inesperadas em arquivo
 DearNotes.Core/
@@ -95,7 +101,7 @@ DearNotes.Tests/
   DeskPositionStoreTests.cs # Testes de desk_position.json
   NotesAutoSaverTests.cs    # Testes da fila de autosave
   NoteTests.cs              # Identidade, metadados e cópia para o autosave
-  MainViewModelTests.cs     # Busca, seleção, fixação, fechamento e avisos
+  MainViewModelTests.cs     # Busca, filtros, fixação, exclusão, fechamento e avisos
   DeskViewModelTests.cs     # Notas fixadas, abertura e estado do leque
   FakeNotesRepository.cs    # Repositório falso para os testes de ViewModel
   RecordingDialogService.cs # Diálogos falsos para os testes de ViewModel
@@ -114,7 +120,7 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 ## Regras de arquitetura
 
 - **MVVM:** Models guardam dados; ViewModels guardam estado e ações; Views contêm apenas layout, bindings e comportamento visual; Services concentram IO, Win32 e regras de infraestrutura.
-- **Ações e avisos:** botões disparam `ICommand` expostos pelo ViewModel, não `Click` no code-behind. Mensagens e confirmações ao usuário passam por `IDialogService`; ViewModels e Views não chamam `MessageBox` diretamente.
+- **Ações e avisos:** botões disparam `ICommand` expostos pelo ViewModel, não `Click` no code-behind. Mensagens e confirmações ao usuário passam por `IDialogService`; ViewModels e Views não chamam `MessageBox` diretamente. Exclusões pedem confirmação no ViewModel, inclusive quando disparadas por atalho.
 - **Tema:** cores e brushes compartilhados ficam em `Themes/Theme.xaml` e são referenciados por `StaticResource`. A cor individual da nota continua vindo dos dados (`Note.Color`).
 - **Núcleo independente:** `DearNotes.Core` concentra modelos, persistência e geometria pura e **não referencia** o projeto WPF nem janelas. O aplicativo referencia o Core; os testes referenciam o Core e, para os testes de ViewModel, o projeto WPF — nunca o contrário.
 - **Dependências apontam para dentro:** ViewModels não conhecem janelas nem `MessageBox`; Views não acessam arquivos nem APIs do Windows. Se uma View precisar de lógica, ela pertence ao ViewModel ou a um Service.
@@ -129,7 +135,9 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 - **Arraste do Desk:** `DeskDragController` conduz a captura do mouse, o deslocamento da pílula e a troca de monitor. A janela apenas conecta os eventos e mantém o estado visual.
 - **Animação do Desk:** `DeskFanAnimator` concentra a abertura e o recolhimento do leque, as animações das abas, a largura da janela e o atraso de recolhimento. A janela não deve duplicar esses estados nem animar as abas diretamente.
 - **Acessibilidade do Desk:** `DeskKeyboardNavigator` concentra os atalhos e a navegação por teclado. A pílula e as abas devem ser focáveis, responder a Enter/Espaço e Escape, percorrer as notas com as setas e mostrar o foco atual; `AutomationProperties` descrevem as ações para leitores de tela.
-- **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`, atrás de `IScreenService`. Code-behind não deve importar `user32.dll` diretamente. Verifique o retorno das APIs, valide identificadores de janela e use `TryMoveWindow`/`TrySetWindowBounds` para posicionamento; falhas esperadas são registradas em log de depuração e não devem derrubar o aplicativo. Callbacks nativos não podem lançar exceções.
+- **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`, atrás de `IScreenService`, e em `WindowFrameService`, que ajusta a moldura personalizada da janela principal. Code-behind não deve importar `user32.dll` diretamente. Verifique o retorno das APIs, valide identificadores de janela e use `TryMoveWindow`/`TrySetWindowBounds` para posicionamento; falhas esperadas são registradas em log de depuração e não devem derrubar o aplicativo. Callbacks nativos não podem lançar exceções.
+- **Moldura da janela principal:** a barra nativa é substituída por `WindowChrome` no XAML; o arraste, a maximização e o menu do sistema continuam funcionando. `WindowFrameService` aplica os cantos arredondados do DWM quando disponíveis e limita a janela maximizada à área útil do monitor em `WM_GETMINMAXINFO`, para não cobrir a barra de tarefas. Em versões anteriores do Windows, a falha do DWM degrada para cantos retos sem encerrar o aplicativo. Os botões minimizar, maximizar e fechar são comportamento visual da View; as demais ações continuam em `ICommand`.
+- **Formatação na View:** conversores de apresentação (tempo relativo, data curta, prévia de uma linha e estado dos chips) ficam em `Views/Converters`, sem regra de negócio e sem acessar arquivos. Textos gerados para a interface seguem o português.
 - **DPI por monitor:** use `DeskScreen.Dpi`, consultado via `GetDpiForMonitor`, nos cálculos de posicionamento. Não dependa da DPI atual da janela antes de ela estar no monitor de destino; atualize a geometria em `OnDpiChanged` e em mudanças de monitor.
 - **Testes:** comportamento novo em `DeskGeometry`, nos stores ou em regras do Core exige teste em `DearNotes.Tests`. Testes de IO usam `TemporaryDirectory` e nunca tocam em `%LocalAppData%`. Casos de monitores estreitos, margens maiores que a área útil e limites de DPI devem ser cobertos pela geometria pura.
 - **Falhas explícitas:** erros de leitura/gravação de notas devem ser informados ao usuário e preservar os dados em memória; falhas de posição do Desk usam o padrão e são registradas em log de depuração. Nunca ignore uma falha de IO silenciosamente. Falhas de criptografia ou de integridade na abertura (chave ausente, chave incorreta ou envelope adulterado) devem encerrar o aplicativo **sem sobrescrever** `notes.json`. Falhas de gravação, inclusive de criptografia, geram um único aviso e novas tentativas com atraso crescente, sem substituir o arquivo válido; ao fechar, aguarde a fila terminar e ofereça a opção de fechar mesmo assim se a gravação falhar.

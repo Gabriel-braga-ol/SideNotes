@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using DearNotes.Models;
+using DearNotes.Services;
 using DearNotes.ViewModels;
 
 namespace DearNotes.Views
@@ -15,8 +16,12 @@ namespace DearNotes.Views
 
         private bool closeConfirmed;
 
-        public MainWindow(MainViewModel viewModel)
+        public MainWindow(
+            MainViewModel viewModel,
+            WindowFrameService windowFrameService)
         {
+            ArgumentNullException.ThrowIfNull(windowFrameService);
+
             InitializeComponent();
 
             this.viewModel = viewModel;
@@ -26,7 +31,32 @@ namespace DearNotes.Views
             Closed += MainWindow_Closed;
             Loaded += MainWindow_Loaded;
 
+            windowFrameService.Attach(this);
+
             DataContext = viewModel;
+        }
+
+        private void MinimizeButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void MaximizeRestoreButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }
+
+        private void CloseButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            Close();
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

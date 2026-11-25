@@ -3,379 +3,1013 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DearNotes"
+        xmlns:converters="clr-namespace:DearNotes.Views.Converters"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="DearNotes"
-        Height="680"
-        Width="1000"
-        MinHeight="480"
-        MinWidth="720"
+        Height="720"
+        Width="1060"
+        MinHeight="560"
+        MinWidth="860"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="SingleBorderWindow"
+        WindowStyle="None"
         ResizeMode="CanResize"
-        Background="{StaticResource WindowBackgroundBrush}"
+        Background="{StaticResource AppBackdropBrush}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         PreviewKeyDown="Window_PreviewKeyDown"
         Closing="Window_Closing">
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="260"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="46"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
-        <!-- Lista de notas -->
-        <Border Grid.Column="0"
-                Background="Transparent"
-                Margin="12">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+    <Window.Resources>
+        <converters:RelativeTimeConverter x:Key="RelativeTime"/>
+        <converters:ShortDateConverter x:Key="ShortDate"/>
+        <converters:PreviewTextConverter x:Key="PreviewText"/>
+        <converters:DeskFilterConverter x:Key="DeskFilter"/>
 
-                <Button Grid.Row="0"
-                        Content="+ Nova nota"
-                        Height="42"
-                        Margin="0,0,0,12"
-                        FontSize="14"
-                        FontWeight="SemiBold"
-                        Foreground="White"
-                        Background="{StaticResource AccentBrush}"
-                        BorderThickness="0"
-                        Cursor="Hand"
-                        Command="{Binding CreateNoteCommand}">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="ButtonBorder"
-                                    Background="{TemplateBinding Background}"
-                                    CornerRadius="10">
-                                <ContentPresenter
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    RecognizesAccessKey="True"/>
-                            </Border>
+        <ControlTemplate x:Key="WindowControlTemplate"
+                         TargetType="Button">
+            <Border x:Name="GlyphBackground"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="15">
+                <ContentPresenter HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+            </Border>
 
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ButtonBorder"
-                                            Property="Background"
-                                            Value="{StaticResource AccentHoverBrush}"/>
-                                </Trigger>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="GlyphBackground"
+                            Property="Opacity"
+                            Value="0.65"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
 
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="ButtonBorder"
-                                            Property="Background"
-                                            Value="{StaticResource AccentPressedBrush}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
+        <Style x:Key="WindowControlButtonStyle"
+               TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground"
+                    Value="{StaticResource WindowControlGlyphBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template"
+                    Value="{StaticResource WindowControlTemplate}"/>
 
-                <StackPanel Grid.Row="1"
-                            Margin="0,0,0,12">
-                    <TextBlock Text="Buscar notas"
-                               FontSize="12"
-                               Foreground="{StaticResource TextMutedBrush}"
-                               Margin="0,0,0,6"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background"
+                            Value="{StaticResource WindowControlHoverBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
-                    <Border Background="White"
-                            CornerRadius="8"
-                            BorderThickness="1"
-                            Padding="10,8">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
+        <Style x:Key="CloseWindowControlButtonStyle"
+               TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground"
+                    Value="{StaticResource WindowControlGlyphBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template"
+                    Value="{StaticResource WindowControlTemplate}"/>
 
-                                <Style.Triggers>
-                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background"
+                            Value="{StaticResource WindowCloseHoverBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
-                        <TextBox Text="{Binding SearchText,
-                                                Mode=TwoWay,
-                                                UpdateSourceTrigger=PropertyChanged}"
-                                 FontSize="14"
-                                 Foreground="{StaticResource TextPrimaryBrush}"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 VerticalContentAlignment="Center"
-                                 ToolTip="Buscar por título ou conteúdo"
-                                 AutomationProperties.Name="Buscar notas"/>
-                    </Border>
+        <ControlTemplate x:Key="PillButtonTemplate"
+                         TargetType="Button">
+            <Border x:Name="Pill"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="15"
+                    Padding="{TemplateBinding Padding}">
+                <ContentPresenter HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+            </Border>
+
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="Pill"
+                            Property="Opacity"
+                            Value="0.7"/>
+                </Trigger>
+
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Pill"
+                            Property="Opacity"
+                            Value="0.4"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style x:Key="PillButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="13,0"/>
+            <Setter Property="Background"
+                    Value="{StaticResource ActionPillBrush}"/>
+            <Setter Property="Foreground"
+                    Value="{StaticResource AppTextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template"
+                    Value="{StaticResource PillButtonTemplate}"/>
+
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background"
+                            Value="{StaticResource ActionPillHoverBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DangerPillButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="13,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground"
+                    Value="{StaticResource DangerTextBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template"
+                    Value="{StaticResource PillButtonTemplate}"/>
+
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background"
+                            Value="{StaticResource DangerHoverBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="FilterChipStyle" TargetType="RadioButton">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground"
+                    Value="{StaticResource AppTextMutedBrush}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chip"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="15"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chip"
+                                        Property="Background"
+                                        Value="{StaticResource ChipSelectedBrush}"/>
+                                <Setter TargetName="Chip"
+                                        Property="BorderBrush"
+                                        Value="{StaticResource ChipSelectedBorderBrush}"/>
+                                <Setter Property="Foreground"
+                                        Value="{StaticResource AppTextPrimaryBrush}"/>
+                            </Trigger>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip"
+                                        Property="Background"
+                                        Value="{StaticResource ChipHoverBrush}"/>
+                            </Trigger>
+
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver"
+                                               Value="True"/>
+                                    <Condition Property="IsChecked"
+                                               Value="True"/>
+                                </MultiTrigger.Conditions>
+
+                                <Setter TargetName="Chip"
+                                        Property="Background"
+                                        Value="{StaticResource ChipSelectedBrush}"/>
+                            </MultiTrigger>
+
+                            <Trigger Property="IsKeyboardFocused"
+                                     Value="True">
+                                <Setter TargetName="Chip"
+                                        Property="BorderBrush"
+                                        Value="{StaticResource AppTextMutedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NotesScrollBarStyle" TargetType="ScrollBar">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Margin="2,4" Background="Transparent">
+                            <Track x:Name="PART_Track"
+                                   IsDirectionReversed="True"
+                                   Orientation="Vertical"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Value="{TemplateBinding Value}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
+                                <Track.Thumb>
+                                    <Thumb Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="{StaticResource ChipSelectedBorderBrush}"
+                                                        CornerRadius="3"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NoteListItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Row"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="10,9">
+                            <ContentPresenter/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row"
+                                        Property="Background"
+                                        Value="{StaticResource RowHoverBrush}"/>
+                            </Trigger>
+
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row"
+                                        Property="Background"
+                                        Value="{StaticResource RowSelectedBrush}"/>
+                                <Setter TargetName="Row"
+                                        Property="BorderBrush"
+                                        Value="{StaticResource RowSelectedBorderBrush}"/>
+                            </Trigger>
+
+                            <Trigger Property="IsKeyboardFocused"
+                                     Value="True">
+                                <Setter TargetName="Row"
+                                        Property="BorderBrush"
+                                        Value="{StaticResource ChipSelectedBorderBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="{StaticResource AppBorderBrush}"
+            BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="46"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Barra de título personalizada, arrastável pela área nativa do WindowChrome. -->
+            <Grid Grid.Row="0">
+                <TextBlock Text="DearNotes"
+                           Margin="20,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AppTextSecondaryBrush}"/>
+
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,10,0">
+
+                    <Button Style="{StaticResource WindowControlButtonStyle}"
+                            Click="MinimizeButton_Click"
+                            ToolTip="Minimizar"
+                            AutomationProperties.Name="Minimizar"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Data="M 0,0 H 10"
+                              Stroke="{Binding Foreground,
+                                               RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.3"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"/>
+                    </Button>
+
+                    <Button Style="{StaticResource WindowControlButtonStyle}"
+                            Click="MaximizeRestoreButton_Click"
+                            ToolTip="Maximizar ou restaurar"
+                            AutomationProperties.Name="Maximizar ou restaurar"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Grid Width="10" Height="10">
+                            <Path Data="M 0.5,0.5 H 9.5 V 9.5 H 0.5 Z"
+                                  Stroke="{Binding Foreground,
+                                                   RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.1"
+                                  StrokeLineJoin="Round">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Visibility"
+                                                Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding WindowState,
+                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                         Value="Maximized">
+                                                <Setter Property="Visibility"
+                                                        Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+
+                            <Path Data="M 2.5,0.5 H 9.5 V 7.5 M 0.5,2.5 V 9.5 H 7.5"
+                                  Stroke="{Binding Foreground,
+                                                   RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.1"
+                                  StrokeLineJoin="Round">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Visibility"
+                                                Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding WindowState,
+                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                         Value="Maximized">
+                                                <Setter Property="Visibility"
+                                                        Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                        </Grid>
+                    </Button>
+
+                    <Button Style="{StaticResource CloseWindowControlButtonStyle}"
+                            Click="CloseButton_Click"
+                            ToolTip="Fechar"
+                            AutomationProperties.Name="Fechar"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Data="M 0,0 L 9,9 M 9,0 L 0,9"
+                              Stroke="{Binding Foreground,
+                                               RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.3"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"/>
+                    </Button>
                 </StackPanel>
+            </Grid>
 
-                <ListBox x:Name="NotesList"
-                         Grid.Row="2"
-                         FocusVisualStyle="{x:Null}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Hidden"
-                         ItemsSource="{Binding FilteredNotes}"
-                         SelectedItem="{Binding SelectedNote, Mode=TwoWay}">
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="330"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Title}"
-                                           FontSize="14"
-                                           FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis"/>
+                <!-- Lista de notas -->
+                <Border Grid.Column="0"
+                        Padding="20,6,16,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                                <TextBlock Text="{Binding Content}"
-                                           FontSize="12"
-                                           Opacity="0.75"
-                                           Margin="0,6,0,0"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis"/>
+                        <Grid Grid.Row="0">
+                            <StackPanel Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Todas as notas"
+                                           FontSize="19"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource AppTextPrimaryBrush}"/>
+
+                                <Border Margin="8,0,0,0"
+                                        Padding="7,2"
+                                        VerticalAlignment="Center"
+                                        Background="{StaticResource BadgeBackgroundBrush}"
+                                        CornerRadius="8">
+                                    <TextBlock Text="{Binding VisibleNoteCount}"
+                                               FontSize="10.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource AppTextMutedBrush}"/>
+                                </Border>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
 
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Height" Value="72"/>
-                            <Setter Property="Margin" Value="0,4"/>
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Background" Value="{Binding Color}"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                            <Setter Property="HorizontalContentAlignment"
-                                    Value="Stretch"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Button HorizontalAlignment="Right"
+                                    Style="{StaticResource PillButtonStyle}"
+                                    Content="+ Nova nota"
+                                    Command="{Binding CreateNoteCommand}"
+                                    AutomationProperties.Name="Criar nova nota"/>
+                        </Grid>
 
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="NoteItemBorder"
-                                                Background="{TemplateBinding Background}"
-                                                BorderBrush="Transparent"
-                                                BorderThickness="2"
-                                                CornerRadius="12"
-                                                Padding="12">
-                                            <ContentPresenter
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Center"/>
-                                        </Border>
-
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsSelected"
+                        <Border Grid.Row="1"
+                                Height="38"
+                                Margin="0,14,0,0"
+                                Padding="11,0"
+                                Background="{StaticResource SearchFieldBrush}"
+                                BorderThickness="1"
+                                CornerRadius="11">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush"
+                                            Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ElementName=SearchInput,
+                                                                       Path=IsKeyboardFocusWithin}"
                                                      Value="True">
-                                                <Setter TargetName="NoteItemBorder"
-                                                        Property="BorderBrush"
-                                                        Value="{StaticResource AccentBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                </ListBox>
+                                            <Setter Property="BorderBrush"
+                                                    Value="{StaticResource ChipSelectedBorderBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
 
-                <TextBlock Grid.Row="2"
-                           Text="Nenhuma nota encontrada"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Top"
-                           Margin="0,24,0,0"
-                           Foreground="{StaticResource TextMutedBrush}"
-                           IsHitTestVisible="False">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ElementName=NotesList,
-                                               Path=HasItems}"
-                             Value="False">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                                <Grid Width="14"
+                                      Height="14"
+                                      VerticalAlignment="Center"
+                                      IsHitTestVisible="False">
+                                    <Ellipse Width="9"
+                                             Height="9"
+                                             Margin="1,1,0,0"
+                                             HorizontalAlignment="Left"
+                                             VerticalAlignment="Top"
+                                             Stroke="{StaticResource SearchIconBrush}"
+                                             StrokeThickness="1.4"/>
+                                    <Line X1="9"
+                                          Y1="9"
+                                          X2="13"
+                                          Y2="13"
+                                          Stroke="{StaticResource SearchIconBrush}"
+                                          StrokeThickness="1.4"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"/>
+                                </Grid>
 
+                                <Grid Grid.Column="1"
+                                      Margin="9,0,0,0">
+                                    <TextBox x:Name="SearchInput"
+                                             Text="{Binding SearchText,
+                                                            Mode=TwoWay,
+                                                            UpdateSourceTrigger=PropertyChanged}"
+                                             VerticalContentAlignment="Center"
+                                             Padding="0"
+                                             FontSize="13"
+                                             Foreground="{StaticResource AppTextPrimaryBrush}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             CaretBrush="{StaticResource AppTextPrimaryBrush}"
+                                             SelectionBrush="{StaticResource EditorSelectionBrush}"
+                                             ToolTip="Buscar por título ou conteúdo"
+                                             AutomationProperties.Name="Buscar notas"/>
+
+                                    <TextBlock Text="Buscar notas"
+                                               VerticalAlignment="Center"
+                                               FontSize="13"
+                                               Foreground="{StaticResource AppTextMutedBrush}"
+                                               IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility"
+                                                        Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SearchText}"
+                                                                 Value="">
+                                                        <Setter Property="Visibility"
+                                                                Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Row="2"
+                                    Orientation="Horizontal"
+                                    Margin="0,12,0,4">
+                            <RadioButton Content="Todas"
+                                         GroupName="NoteFilter"
+                                         Style="{StaticResource FilterChipStyle}"
+                                         IsChecked="{Binding ShowOnlyDesk,
+                                                             Converter={StaticResource DeskFilter},
+                                                             ConverterParameter=all,
+                                                             Mode=TwoWay}"/>
+
+                            <RadioButton Content="No Desk"
+                                         GroupName="NoteFilter"
+                                         Margin="6,0,0,0"
+                                         Style="{StaticResource FilterChipStyle}"
+                                         IsChecked="{Binding ShowOnlyDesk,
+                                                             Converter={StaticResource DeskFilter},
+                                                             ConverterParameter=desk,
+                                                             Mode=TwoWay}"/>
+                        </StackPanel>
+
+                        <Grid Grid.Row="3" Margin="0,10,0,0">
+                            <ListBox x:Name="NotesList"
+                                     ItemsSource="{Binding FilteredNotes}"
+                                     SelectedItem="{Binding SelectedNote,
+                                                            Mode=TwoWay}"
+                                     ItemContainerStyle="{StaticResource NoteListItemStyle}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     FocusVisualStyle="{x:Null}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     VirtualizingPanel.ScrollUnit="Pixel">
+
+                                <ListBox.Resources>
+                                    <Style TargetType="ScrollBar"
+                                           BasedOn="{StaticResource NotesScrollBarStyle}"/>
+                                </ListBox.Resources>
+
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="4"/>
+                                                <ColumnDefinition Width="11"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0"
+                                                    Background="{Binding Color}"
+                                                    CornerRadius="2"/>
+
+                                            <StackPanel Grid.Column="2"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="FontSize"
+                                                                    Value="13"/>
+                                                            <Setter Property="FontWeight"
+                                                                    Value="SemiBold"/>
+                                                            <Setter Property="Text"
+                                                                    Value="{Binding Title}"/>
+                                                            <Setter Property="Foreground"
+                                                                    Value="{StaticResource AppTextPrimaryBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Title}"
+                                                                             Value="">
+                                                                    <Setter Property="Text"
+                                                                            Value="Sem título"/>
+                                                                    <Setter Property="FontStyle"
+                                                                            Value="Italic"/>
+                                                                    <Setter Property="FontWeight"
+                                                                            Value="Normal"/>
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{StaticResource AppTextMutedBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+
+                                                <TextBlock FontSize="11.5"
+                                                           Margin="0,2,0,0"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text"
+                                                                    Value="{Binding Content,
+                                                                                    Converter={StaticResource PreviewText}}"/>
+                                                            <Setter Property="Foreground"
+                                                                    Value="{StaticResource AppTextMutedBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Content}"
+                                                                             Value="">
+                                                                    <Setter Property="Text"
+                                                                            Value="Sem conteúdo"/>
+                                                                    <Setter Property="FontStyle"
+                                                                            Value="Italic"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="3"
+                                                        VerticalAlignment="Center"
+                                                        Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding UpdatedAt,
+                                                                          Converter={StaticResource RelativeTime},
+                                                                          ConverterParameter=short}"
+                                                           HorizontalAlignment="Right"
+                                                           FontSize="10.5"
+                                                           Foreground="{StaticResource AppTextMutedBrush}"/>
+
+                                                <Border Margin="0,5,0,0"
+                                                        Padding="6,2"
+                                                        Background="{StaticResource BadgeBackgroundBrush}"
+                                                        CornerRadius="6">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility"
+                                                                    Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsPinnedToDesk}"
+                                                                             Value="False">
+                                                                    <Setter Property="Visibility"
+                                                                            Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+
+                                                    <TextBlock Text="NO DESK"
+                                                               FontSize="8.5"
+                                                               FontWeight="Bold"
+                                                               Foreground="{StaticResource AppTextMutedBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock HorizontalAlignment="Center"
+                                       VerticalAlignment="Top"
+                                       Margin="0,28,0,0"
+                                       FontSize="12"
+                                       Foreground="{StaticResource AppTextMutedBrush}"
+                                       IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text"
+                                                Value="Nenhuma nota encontrada"/>
+                                        <Setter Property="Visibility"
+                                                Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowOnlyDesk}"
+                                                         Value="True">
+                                                <Setter Property="Text"
+                                                        Value="Nenhuma nota fixada no Desk"/>
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding ElementName=NotesList,
+                                                                           Path=HasItems}"
+                                                         Value="False">
+                                                <Setter Property="Visibility"
+                                                        Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Editor da nota selecionada -->
+                <Border Grid.Column="1"
+                        Margin="6,0,10,10"
+                        Padding="20,14,20,20"
+                        Background="{StaticResource EditorSurfaceBrush}"
+                        BorderBrush="{StaticResource EditorSurfaceBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="18">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0"
+                              Margin="4,0,4,12">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility"
+                                            Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedNote}"
+                                                     Value="{x:Null}">
+                                            <Setter Property="Visibility"
+                                                    Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <StackPanel Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Ellipse Width="6"
+                                         Height="6"
+                                         Margin="0,0,7,0"
+                                         Fill="{Binding SelectedNote.Color}"/>
+
+                                <TextBlock FontSize="10"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource AppTextMutedBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="NOTA"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
+                                                             Value="True">
+                                                    <Setter Property="Text"
+                                                            Value="NO DESK"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Right">
+                                <Button Command="{Binding ToggleDeskPinCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="Button"
+                                               BasedOn="{StaticResource PillButtonStyle}">
+                                            <Setter Property="Content"
+                                                    Value="Fixar no Desk"/>
+                                            <Setter Property="AutomationProperties.Name"
+                                                    Value="Fixar no Desk"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
+                                                             Value="True">
+                                                    <Setter Property="Content"
+                                                            Value="Desafixar"/>
+                                                    <Setter Property="AutomationProperties.Name"
+                                                            Value="Desafixar do Desk"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Button Margin="8,0,0,0"
+                                        Style="{StaticResource DangerPillButtonStyle}"
+                                        Content="Excluir"
+                                        Command="{Binding DeleteNoteCommand}"
+                                        AutomationProperties.Name="Excluir nota"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Grid.Row="1"
+                                Padding="26,24,26,20"
+                                Background="{Binding SelectedNote.Color,
+                                                     TargetNullValue=Transparent,
+                                                     FallbackValue=Transparent}"
+                                CornerRadius="18">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility"
+                                            Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedNote}"
+                                                     Value="{x:Null}">
+                                            <Setter Property="Visibility"
+                                                    Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0"
+                                      Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid Grid.Column="0">
+                                        <TextBox x:Name="TitleTextBox"
+                                                 Text="{Binding SelectedNote.Title,
+                                                                Mode=TwoWay,
+                                                                UpdateSourceTrigger=PropertyChanged,
+                                                                TargetNullValue='',
+                                                                FallbackValue=''}"
+                                                 FontSize="26"
+                                                 FontWeight="SemiBold"
+                                                 TextWrapping="NoWrap"
+                                                 Foreground="{StaticResource EditorTextBrush}"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 Padding="0"
+                                                 CaretBrush="{StaticResource EditorTextBrush}"
+                                                 SelectionBrush="{StaticResource EditorSelectionBrush}"
+                                                 AutomationProperties.Name="Título da nota"/>
+
+                                        <TextBlock Text="Título"
+                                                   FontSize="26"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource EditorMutedTextBrush}"
+                                                   IsHitTestVisible="False">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility"
+                                                            Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedNote.Title}"
+                                                                     Value="">
+                                                            <Setter Property="Visibility"
+                                                                    Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+
+                                    <TextBlock Grid.Column="1"
+                                               Margin="18,7,0,0"
+                                               VerticalAlignment="Top"
+                                               FontSize="11"
+                                               Foreground="{StaticResource EditorMutedTextBrush}"
+                                               Text="{Binding SelectedNote.UpdatedAt,
+                                                              Converter={StaticResource RelativeTime},
+                                                              StringFormat='Editada {0}'}"/>
+                                </Grid>
+
+                                <Grid Grid.Row="1">
+                                    <TextBox x:Name="ContentTextBox"
+                                             Text="{Binding SelectedNote.Content,
+                                                            Mode=TwoWay,
+                                                            UpdateSourceTrigger=PropertyChanged,
+                                                            TargetNullValue='',
+                                                            FallbackValue=''}"
+                                             FontSize="14.5"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             VerticalContentAlignment="Top"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Foreground="{StaticResource EditorTextBrush}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             Padding="0"
+                                             CaretBrush="{StaticResource EditorTextBrush}"
+                                             SelectionBrush="{StaticResource EditorSelectionBrush}"
+                                             AutomationProperties.Name="Conteúdo da nota"/>
+
+                                    <TextBlock Text="Comece a escrever…"
+                                               FontSize="14.5"
+                                               Foreground="{StaticResource EditorMutedTextBrush}"
+                                               IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility"
+                                                        Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedNote.Content}"
+                                                                 Value="">
+                                                        <Setter Property="Visibility"
+                                                                Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+
+                                <StackPanel Grid.Row="2"
+                                            Margin="0,18,0,0">
+                                    <Border Height="1"
+                                            Margin="0,0,0,10"
+                                            Background="{StaticResource EditorDividerBrush}"/>
+
+                                    <TextBlock FontSize="11"
+                                               Foreground="{StaticResource EditorMutedTextBrush}"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="Criada em "/>
+                                        <Run Text="{Binding SelectedNote.CreatedAt,
+                                                            Converter={StaticResource ShortDate},
+                                                            Mode=OneWay}"/>
+                                        <Run Text="   ·   Editada "/>
+                                        <Run Text="{Binding SelectedNote.UpdatedAt,
+                                                            Converter={StaticResource RelativeTime},
+                                                            Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Grid Grid.Row="1">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility"
+                                            Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedNote}"
+                                                     Value="{x:Null}">
+                                            <Setter Property="Visibility"
+                                                    Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Border Width="64"
+                                        Height="64"
+                                        HorizontalAlignment="Center"
+                                        Background="{StaticResource EmptyStateIconBrush}"
+                                        CornerRadius="32">
+                                    <Path Width="24"
+                                          Height="24"
+                                          Data="M 5,3 H 15 L 19,7 V 21 H 5 Z M 15,3 V 7 H 19"
+                                          Stretch="Uniform"
+                                          Stroke="{StaticResource AppTextMutedBrush}"
+                                          StrokeThickness="1.3"
+                                          StrokeLineJoin="Round"/>
+                                </Border>
+
+                                <TextBlock Text="Selecione ou crie uma nota"
+                                           Margin="0,16,0,0"
+                                           HorizontalAlignment="Center"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AppTextSecondaryBrush}"/>
+
+                                <TextBlock Text="As alterações são salvas automaticamente."
+                                           Margin="0,6,0,0"
+                                           HorizontalAlignment="Center"
+                                           FontSize="12"
+                                           Foreground="{StaticResource AppTextMutedBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
             </Grid>
-        </Border>
-
-        <!-- Editor da nota selecionada -->
-        <Border x:Name="NotePanel"
-                Grid.Column="1"
-                Background="{Binding SelectedNote.Color,
-                                     TargetNullValue=Transparent,
-                                     FallbackValue=Transparent}"
-                CornerRadius="18"
-                Margin="0,12,12,12"
-                Padding="24">
-
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="IsEnabled" Value="True"/>
-
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding SelectedNote}"
-                         Value="{x:Null}">
-                            <Setter Property="IsEnabled" Value="False"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <TextBox x:Name="TitleTextBox"
-                         Grid.Row="0"
-                         Text="{Binding SelectedNote.Title,
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged,
-                                        TargetNullValue='',
-                                        FallbackValue=''}"
-                         FontSize="24"
-                         TextWrapping="NoWrap"
-                         FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Margin="0,0,0,20"/>
-
-                <TextBox x:Name="ContentTextBox"
-                         Grid.Row="1"
-                         Text="{Binding SelectedNote.Content,
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged,
-                                        TargetNullValue='',
-                                        FallbackValue=''}"
-                         FontSize="16"
-                         Foreground="{StaticResource AccentBrush}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         VerticalContentAlignment="Top"
-                         VerticalScrollBarVisibility="Hidden"/>
-
-                <Button Grid.Row="2"
-                        Width="40"
-                        Height="40"
-                        HorizontalAlignment="Right"
-                        Margin="0,16,0,0"
-                        Cursor="Hand"
-                        Command="{Binding ToggleDeskPinCommand}">
-
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="{StaticResource PinBackgroundBrush}"/>
-                            <Setter Property="Foreground" Value="{StaticResource PinIconBrush}"/>
-                            <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="ToolTip" Value="Fixar no Desk"/>
-                            <Setter Property="AutomationProperties.Name"
-                    Value="Fixar no Desk"/>
-
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
-                                             Value="True">
-                                    <Setter Property="BorderBrush" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="{StaticResource PinIconActiveBrush}"/>
-                                    <Setter Property="ToolTip" Value="Desafixar do Desk"/>
-                                    <Setter Property="AutomationProperties.Name"
-                                            Value="Desafixar do Desk"/>
-                                </DataTrigger>
-
-                                <DataTrigger Binding="{Binding SelectedNote}"
-                                             Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Circle"
-                                    CornerRadius="20"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="1">
-
-                                <Viewbox Width="21"
-                                         Height="21"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center">
-                                    <Canvas Width="24" Height="24">
-                                        <Path x:Name="PinIcon"
-                                              Data="M 9,3 L 15,3 L 14,9 L 17,13
-                                                    L 17,15 L 7,15 L 7,13 L 10,9 Z
-                                                    M 12,15 L 12,21"
-                                              Fill="Transparent"
-                                              Stroke="{TemplateBinding Foreground}"
-                                              StrokeThickness="1.7"
-                                              StrokeStartLineCap="Round"
-                                              StrokeEndLineCap="Round"
-                                              StrokeLineJoin="Round">
-                                            <Path.RenderTransform>
-                                                <RotateTransform Angle="35"
-                                                                 CenterX="12"
-                                                                 CenterY="12"/>
-                                            </Path.RenderTransform>
-                                        </Path>
-                                    </Canvas>
-                                </Viewbox>
-                            </Border>
-
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Circle"
-                                            Property="Background"
-                                            Value="{StaticResource PinHoverBackgroundBrush}"/>
-                                </Trigger>
-
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Circle"
-                                            Property="Opacity"
-                                            Value="0.7"/>
-                                </Trigger>
-
-                                <DataTrigger Binding="{Binding SelectedNote.IsPinnedToDesk}"
-                                             Value="True">
-                                    <Setter TargetName="PinIcon"
-                                            Property="Fill"
-                                            Value="{StaticResource PinIconActiveBrush}"/>
-                                </DataTrigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
-            </Grid>
-        </Border>
-
-        <TextBlock Grid.Column="1"
-           Text="Selecione ou crie uma nota"
-           HorizontalAlignment="Center"
-           VerticalAlignment="Center"
-           FontSize="18"
-           Foreground="{StaticResource TextMutedBrush}"
-           IsHitTestVisible="False">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding SelectedNote}"
-                             Value="{x:Null}">
-                            <Setter Property="Visibility" Value="Visible"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>

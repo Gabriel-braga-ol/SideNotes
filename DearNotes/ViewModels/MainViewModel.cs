@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,14 +13,19 @@ namespace DearNotes.ViewModels
 {
     public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
+        private const int MaxDeskPinnedNotes = 5;
+
         private readonly INotesRepository repository;
 
         private readonly IDialogService dialogService;
 
+        private readonly RelayCommand toggleDeskPinCommand;
+
+        private readonly RelayCommand deleteNoteCommand;
+
         private Note? selectedNote;
         private string searchText = string.Empty;
-
-        private const int MaxDeskPinnedNotes = 5;
+        private bool showOnlyDesk;
 
         public ObservableCollection<Note> Notes => repository.Notes;
 
@@ -28,11 +34,14 @@ namespace DearNotes.ViewModels
 
         public ICollectionView FilteredNotes { get; }
 
+        public int VisibleNoteCount =>
+            FilteredNotes.Cast<Note>().Count();
+
         public ICommand CreateNoteCommand { get; }
 
         public ICommand ToggleDeskPinCommand => toggleDeskPinCommand;
 
-        private readonly RelayCommand toggleDeskPinCommand;
+        public ICommand DeleteNoteCommand => deleteNoteCommand;
 
         private int PinnedNotesCount =>
             Notes.Count(note => note.IsPinnedToDesk);
@@ -58,8 +67,12 @@ namespace DearNotes.ViewModels
             toggleDeskPinCommand = new RelayCommand(
                 ToggleDeskPin,
                 () => SelectedNote is not null);
+            deleteNoteCommand = new RelayCommand(
+                DeleteSelectedNote,
+                () => SelectedNote is not null);
 
             repository.SaveFailed += OnSaveFailed;
+            Notes.CollectionChanged += OnNotesCollectionChanged;
 
             SelectedNote = Notes.FirstOrDefault();
         }
@@ -78,17 +91,41 @@ namespace DearNotes.ViewModels
                 if (searchText == value) return;
 
                 searchText = value;
-                FilteredNotes.Refresh();
+                RefreshFilter();
 
-                PropertyChanged?.Invoke(
-                    this,
-                    new PropertyChangedEventArgs(nameof(SearchText)));
+                Notify(nameof(SearchText));
+            }
+        }
+
+        public bool ShowOnlyDesk
+        {
+            get => showOnlyDesk;
+            set
+            {
+                if (showOnlyDesk == value) return;
+
+                showOnlyDesk = value;
+                Notify(nameof(ShowOnlyDesk));
+
+                RefreshFilter();
+                EnsureSelectionIsVisible();
             }
         }
 
         public void DeleteSelectedNote()
         {
             if (SelectedNote is null) return;
+
+            string target = string.IsNullOrWhiteSpace(SelectedNote.Title)
+                ? "esta nota"
+                : $"a nota \"{SelectedNote.Title}\"";
+
+            bool confirmed = dialogService.Confirm(
+                $"Excluir {target}?\n\n" +
+                "Esta ação não pode ser desfeita.",
+                "Excluir nota");
+
+            if (!confirmed) return;
 
             Note noteToDelete = SelectedNote;
 
@@ -142,11 +179,14 @@ namespace DearNotes.ViewModels
         public void Dispose()
         {
             repository.SaveFailed -= OnSaveFailed;
+            Notes.CollectionChanged -= OnNotesCollectionChanged;
             repository.StopAutoSave();
         }
 
         private void CreateNote()
         {
+            // A nota nova nasce sem fixação; limpar os filtros garante que ela apareça.
+            ShowOnlyDesk = false;
             SearchText = string.Empty;
 
             Note note = repository.CreateNote();
@@ -176,6 +216,9 @@ namespace DearNotes.ViewModels
                 !SelectedNote.IsPinnedToDesk;
 
             repository.SavePendingChanges();
+
+            RefreshFilter();
+            EnsureSelectionIsVisible();
         }
 
         private void SetSelectedNote(
@@ -194,15 +237,34 @@ namespace DearNotes.ViewModels
             selectedNote = value;
 
             toggleDeskPinCommand.RaiseCanExecuteChanged();
+            deleteNoteCommand.RaiseCanExecuteChanged();
 
-            PropertyChanged?.Invoke(
-                this,
-                new PropertyChangedEventArgs(nameof(SelectedNote)));
+            Notify(nameof(SelectedNote));
+        }
+
+        private void RefreshFilter()
+        {
+            FilteredNotes.Refresh();
+            Notify(nameof(VisibleNoteCount));
+        }
+
+        private void EnsureSelectionIsVisible()
+        {
+            if (SelectedNote is not null &&
+                FilteredNotes.Contains(SelectedNote))
+            {
+                return;
+            }
+
+            SetSelectedNote(
+                FilteredNotes.Cast<Note>().FirstOrDefault());
         }
 
         private bool MatchesSearch(object item)
         {
             if (item is not Note note) return false;
+
+            if (showOnlyDesk && !note.IsPinnedToDesk) return false;
 
             string query = searchText.Trim();
 
@@ -214,9 +276,23 @@ namespace DearNotes.ViewModels
                        query, StringComparison.OrdinalIgnoreCase);
         }
 
+        private void OnNotesCollectionChanged(
+            object? sender,
+            NotifyCollectionChangedEventArgs e)
+        {
+            Notify(nameof(VisibleNoteCount));
+        }
+
         private void OnSaveFailed(string message)
         {
             dialogService.ShowWarning(message, "Falha ao salvar");
+        }
+
+        private void Notify(string propertyName)
+        {
+            PropertyChanged?.Invoke(
+                this,
+                new PropertyChangedEventArgs(propertyName));
         }
     }
 }
