@@ -28,6 +28,21 @@ namespace DearNotes.Tests
         }
 
         [Fact]
+        public void Title_WhenChanged_NotifiesUpdatedAt()
+        {
+            var note = new Note();
+
+            var changedProperties = new List<string?>();
+
+            note.PropertyChanged += (_, e) =>
+                changedProperties.Add(e.PropertyName);
+
+            note.Title = "Nova";
+
+            Assert.Contains(nameof(Note.UpdatedAt), changedProperties);
+        }
+
+        [Fact]
         public void CreateSnapshot_IsIndependentFromOriginal()
         {
             var note = new Note

@@ -10,12 +10,16 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 
 - Criação, edição e exclusão de notas com título e conteúdo.
 - Cores atribuídas automaticamente a partir de uma paleta.
-- Lista com título, prévia do conteúdo e destaque da nota selecionada.
+- Lista com título, prévia do conteúdo, barra de cor, tempo relativo e destaque da nota selecionada.
 - Busca por título ou conteúdo, sem diferenciar maiúsculas e minúsculas.
+- Chips **Todas** e **No Desk** para filtrar a lista pelas notas fixadas, com contagem das notas visíveis.
+- Exclusão pelo botão do editor ou pela tecla **Delete**, sempre com confirmação.
+- Painel do editor com cartão na cor da nota, metadados de criação e atualização e ações de fixar no Desk e excluir.
+- Moldura personalizada com cantos arredondados, barra de título arrastável e botões de minimizar, maximizar e fechar; a janela maximizada respeita a área útil do monitor.
 - Salvamento automático após um segundo sem digitar, em segundo plano: apenas o snapshot mais recente é enfileirado, sem bloquear a interface, com novas tentativas em intervalos crescentes (até 30 s) quando a gravação falha.
 - Persistência local em JSON cifrado com formato versionado, identificador estável e datas de criação e atualização por nota.
 - Criptografia em repouso com AES-GCM de 256 bits; a chave aleatória é protegida pelo DPAPI no escopo do usuário atual do Windows.
-- Janela redimensionável e mensagens para estados sem seleção ou sem resultados.
+- Mensagens para estados sem seleção ou sem resultados.
 - Validação dos dados carregados e preservação de uma cópia de arquivos inválidos.
 - Aviso único de falha de gravação, com novas tentativas automáticas, e confirmação antes de fechar quando não é possível salvar.
 - Registro de falhas inesperadas em `%LocalAppData%\DearNotes\logs\app.log`, sem registrar o conteúdo das notas.
@@ -42,7 +46,8 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - `System.Text.Json` para leitura e gravação dos dados.
 - Criptografia AES-GCM e DPAPI (`System.Security.Cryptography.ProtectedData`, incluído no .NET 10 para Windows) para proteger as notas em repouso.
 - xUnit para os testes automatizados do núcleo.
-- APIs do Windows (Win32) via P/Invoke para consultar monitores, DPI efetivo e posicionar o Desk.
+- APIs do Windows (Win32) via P/Invoke para consultar monitores, DPI efetivo, posicionar o Desk e ajustar a moldura da janela principal (cantos arredondados e maximização na área útil).
+- `WindowChrome` para arraste, redimensionamento e botões da janela personalizada.
 - Reconhecimento de DPI por monitor com `PerMonitorV2` no manifesto do aplicativo.
 
 ## Como executar
@@ -89,9 +94,11 @@ Para corrigir a formatação automaticamente, execute o mesmo comando sem `--ver
 1. Clique em **+ Nova nota** para criar uma anotação.
 2. Edite o título e o conteúdo no painel à direita. As alterações são salvas automaticamente.
 3. Use **Buscar notas** para localizar uma palavra no título ou no conteúdo. Limpe o campo para mostrar todas as notas novamente.
-4. Para excluir, selecione uma nota na lista e pressione **Delete** com o foco na lista. Ao editar um texto, Delete mantém sua função normal de apagar caracteres.
+4. Use os chips **Todas** e **No Desk** para alternar entre a lista completa e apenas as notas fixadas. A contagem ao lado do título mostra quantas notas estão visíveis.
+5. Use **Fixar no Desk** no topo do editor para enviar a nota ao Desk; o mesmo botão a desafixa.
+6. Para excluir, use **Excluir** no topo do editor ou selecione uma nota na lista e pressione **Delete** com o foco na lista. A exclusão sempre pede confirmação. Ao editar um texto, Delete mantém sua função normal de apagar caracteres.
 
-Criar uma nota limpa a busca ativa para que a nova anotação fique visível. Ao excluir, a próxima seleção é escolhida entre as notas visíveis na lista.
+Criar uma nota limpa a busca e o filtro **No Desk** para que a nova anotação fique visível. Ao excluir, a próxima seleção é escolhida entre as notas visíveis na lista. Também é possível arrastar a janela pela barra de título personalizada, usar duplo clique nela para maximizar ou restaurar e acessar o menu do sistema com **Alt+Espaço**.
 
 ### Modo Desk
 
@@ -189,10 +196,12 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes.Core/Models/NotesDocument.cs` | Documento versionado que envolve a lista de notas em `notes.json`. |
 | `DearNotes.Core/Models/NoteDocument.cs` | Representação persistida de uma nota, com identificador, conteúdo, cor, fixação e datas. |
 | `DearNotes.Core/Models/DeskPosition.cs` | Identificador do monitor, lado e posição vertical do Desk. |
-| `DearNotes/ViewModels/MainViewModel.cs` | Seleção, busca e ações da janela principal; delegação da criação, exclusão e salvamento ao repositório. |
+| `DearNotes/ViewModels/MainViewModel.cs` | Seleção, busca, filtro do Desk, contagem de notas visíveis e ações da janela principal, incluindo a confirmação de exclusão e a delegação da criação e do salvamento ao repositório. |
 | `DearNotes/ViewModels/DeskViewModel.cs` | Visão das notas fixadas, estado do Desk e transições de abertura, fechamento, expansão e mudança de lado. |
-| `DearNotes/Views/MainWindow.xaml` | Layout, estilos e bindings da interface. |
-| `DearNotes/Views/MainWindow.xaml.cs` | Interações visuais, foco e atalhos da janela principal. |
+| `DearNotes/Views/MainWindow.xaml` | Layout, estilos e bindings da interface, incluindo a moldura personalizada, a lista lateral, os chips de filtro e o editor em cartão. |
+| `DearNotes/Views/MainWindow.xaml.cs` | Interações visuais, foco, atalhos e botões de minimizar, maximizar e fechar da janela principal. |
+| `DearNotes/Views/Converters/RelativeTimeConverter.cs`, `ShortDateConverter.cs` e `PreviewTextConverter.cs` | Conversores de apresentação da lista e do editor: tempo relativo, data curta e prévia do conteúdo em uma linha. |
+| `DearNotes/Views/Converters/DeskFilterConverter.cs` | Liga os chips **Todas** e **No Desk** ao estado de filtro do ViewModel. |
 | `DearNotes/Views/DeskWindow.xaml` e `DearNotes/Views/DeskWindow.xaml.cs` | Pílula lateral, eventos de mouse, mensagens do Windows, posicionamento do editor e ciclo de vida da janela. |
 | `DearNotes/Views/DeskLayoutService.cs` | Estado de posicionamento do Desk: monitor atual, lado, largura, posição vertical, encaixe, disposição dos cards e persistência da posição. |
 | `DearNotes/Views/DeskDragController.cs` | Arraste da pílula com o botão direito: captura do mouse, deslocamento, escolha do monitor, lado e recuperação de falhas do Win32. |
@@ -214,14 +223,15 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Themes/Theme.xaml` | Paleta de brushes compartilhada pelas janelas, carregada em `App.xaml`. |
 | `DearNotes/Services/IScreenService.cs` e `DeskScreenService.cs` | Contrato e implementação da consulta dos monitores, área útil, DPI efetivo, posição do cursor e dimensões e posicionamento tolerante a falhas da janela via Win32. |
 | `DearNotes/Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
+| `DearNotes/Services/WindowFrameService.cs` | Cantos arredondados da janela via DWM e limites de maximização na área útil do monitor via `WM_GETMINMAXINFO`, com degradação silenciosa em versões anteriores do Windows. |
 | `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
 | `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, editor e arraste. |
 | `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, migração, criptografia, limites e preservação de arquivos inválidos. |
 | `DearNotes.Tests/AesGcmNoteEncryptionTests.cs` | Ida e volta da criptografia, nonces únicos, adulteração de conteúdo e tag, chave incorreta e tamanhos inválidos. |
 | `DearNotes.Tests/FixedKeyProvider.cs` | Chave fixa usada apenas nos testes para tornar a criptografia determinística e isolada do DPAPI. |
 | `DearNotes.Tests/NotesAutoSaverTests.cs` | Gravação em segundo plano, coalescência de snapshots, falhas e gravação síncrona de emergência. |
-| `DearNotes.Tests/NoteTests.cs` | Identidade, datas e independência das cópias usadas pelo autosave. |
-| `DearNotes.Tests/MainViewModelTests.cs` e `DeskViewModelTests.cs` | Busca e seleção, fixação no Desk, confirmação de fechamento, avisos e estado do leque. |
+| `DearNotes.Tests/NoteTests.cs` | Identidade, datas, notificação de atualização e independência das cópias usadas pelo autosave. |
+| `DearNotes.Tests/MainViewModelTests.cs` e `DeskViewModelTests.cs` | Busca, filtros, seleção, fixação no Desk, exclusão confirmada, confirmação de fechamento, avisos e estado do leque. |
 | `DearNotes.Tests/FakeNotesRepository.cs` e `RecordingDialogService.cs` | Dublês de `INotesRepository` e `IDialogService` usados nos testes de ViewModel. |
 | `DearNotes/app.manifest` | Configuração de reconhecimento de DPI por monitor (`PerMonitorV2`). |
 | `AGENTS.md` | Regras de arquitetura, convenções de código, comandos e restrições; deve ser consultado antes de alterar o projeto. |
@@ -235,10 +245,12 @@ Os dois ViewModels utilizam a mesma instância de `NotesRepository` por meio de 
 
 A criptografia também é injetada: o Core define `INoteEncryption` e `IKeyProvider`, `AesGcmNoteEncryption` implementa o envelope AES-GCM e o aplicativo WPF fornece a chave por meio de `DpapiKeyProvider`. Assim, os testes usam uma chave fixa e não dependem do DPAPI nem do perfil do Windows. A chave nunca é gravada em texto puro e é zerada da memória após cada operação de criptografia ou descriptografia.
 
+A janela principal combina o `WindowChrome` declarado no XAML, responsável por arraste, redimensionamento e botões da janela, com o `WindowFrameService`, que concentra os ajustes nativos de cantos arredondados e maximização. Os conversores de `Views/Converters` apenas formatam os dados para exibição e não alteram as notas.
+
 ## Próximas etapas
 
 - [ ] Refinar o comportamento da busca durante a edição de notas.
-- [ ] Melhorar o design do modo Janela.
+- [x] Melhorar o design do modo Janela.
 - [x] Compartilhar as mesmas notas entre os modos **Desk** e Janela.
 - [x] Permitir selecionar até cinco notas para exibição no Desk.
 - [x] Permitir arrastar o Desk entre monitores e os lados esquerdo e direito da tela.

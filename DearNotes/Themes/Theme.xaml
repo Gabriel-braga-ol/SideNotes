@@ -38,4 +38,40 @@
     <SolidColorBrush x:Key="DeskPillHoverBorderBrush" Color="#70FFFFFF"/>
     <SolidColorBrush x:Key="DeskPillFocusBorderBrush" Color="#FFFFFFFF"/>
 
+    <!-- Janela principal: superfície creme, cartões claros e textos quentes. -->
+    <SolidColorBrush x:Key="AppBackdropBrush" Color="#F4EDE1"/>
+    <SolidColorBrush x:Key="AppBorderBrush" Color="#E5DBCB"/>
+    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#2B2923"/>
+    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#4B463C"/>
+    <SolidColorBrush x:Key="AppTextMutedBrush" Color="#867D6E"/>
+
+    <SolidColorBrush x:Key="EditorSurfaceBrush" Color="#FBF7EF"/>
+    <SolidColorBrush x:Key="EditorSurfaceBorderBrush" Color="#EEE6D9"/>
+
+    <SolidColorBrush x:Key="SearchFieldBrush" Color="#EAE1D2"/>
+    <SolidColorBrush x:Key="SearchIconBrush" Color="#8A8173"/>
+    <SolidColorBrush x:Key="ChipHoverBrush" Color="#E5DBCB"/>
+    <SolidColorBrush x:Key="ChipSelectedBrush" Color="#FDFAF4"/>
+    <SolidColorBrush x:Key="ChipSelectedBorderBrush" Color="#DCD1BF"/>
+
+    <SolidColorBrush x:Key="ActionPillBrush" Color="#ECE3D4"/>
+    <SolidColorBrush x:Key="ActionPillHoverBrush" Color="#E0D6C4"/>
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#A64B42"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#F2DDD7"/>
+
+    <SolidColorBrush x:Key="RowHoverBrush" Color="#EFE6D7"/>
+    <SolidColorBrush x:Key="RowSelectedBrush" Color="#FDFAF4"/>
+    <SolidColorBrush x:Key="RowSelectedBorderBrush" Color="#DED3C1"/>
+    <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#E9E0D1"/>
+
+    <SolidColorBrush x:Key="WindowControlGlyphBrush" Color="#756D5F"/>
+    <SolidColorBrush x:Key="WindowControlHoverBrush" Color="#EAE1D2"/>
+    <SolidColorBrush x:Key="WindowCloseHoverBrush" Color="#C15A4E"/>
+
+    <SolidColorBrush x:Key="EditorTextBrush" Color="#2C2A24"/>
+    <SolidColorBrush x:Key="EditorMutedTextBrush" Color="#7C7263"/>
+    <SolidColorBrush x:Key="EditorDividerBrush" Color="#2E2C2A24"/>
+    <SolidColorBrush x:Key="EditorSelectionBrush" Color="#402C2A24"/>
+    <SolidColorBrush x:Key="EmptyStateIconBrush" Color="#E9E0D1"/>
+
 </ResourceDictionary>

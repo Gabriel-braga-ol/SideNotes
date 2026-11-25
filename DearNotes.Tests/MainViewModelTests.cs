@@ -22,10 +22,39 @@ namespace DearNotes.Tests
             viewModel.SearchText = "comprar";
 
             Assert.Equal(2, VisibleNotes(viewModel).Length);
+            Assert.Equal(2, viewModel.VisibleNoteCount);
 
             viewModel.SearchText = "pão";
 
             Assert.Single(VisibleNotes(viewModel));
+            Assert.Equal(1, viewModel.VisibleNoteCount);
+        }
+
+        [Fact]
+        public void CreateNote_WhenFiltersAreActive_ClearsFiltersAndSelectsNewNote()
+        {
+            var repository = new FakeNotesRepository();
+            Note pinned = CreateNote("Fixada", "pão", isPinned: true);
+
+            repository.Notes.Add(pinned);
+
+            using var viewModel = new MainViewModel(
+                repository,
+                new RecordingDialogService());
+
+            viewModel.SearchText = "pão";
+            viewModel.ShowOnlyDesk = true;
+
+            Note? createdNote = null;
+            viewModel.NoteCreated += note => createdNote = note;
+
+            viewModel.CreateNoteCommand.Execute(null);
+
+            Assert.NotNull(createdNote);
+            Assert.False(viewModel.ShowOnlyDesk);
+            Assert.Equal(string.Empty, viewModel.SearchText);
+            Assert.Same(createdNote, viewModel.SelectedNote);
+            Assert.Contains(createdNote, VisibleNotes(viewModel));
         }
 
         [Fact]
@@ -82,6 +111,7 @@ namespace DearNotes.Tests
         public void DeleteSelectedNote_RemovesNoteAndSelectsNextVisibleNote()
         {
             var repository = new FakeNotesRepository();
+            var dialogs = new RecordingDialogService();
 
             Note first = CreateNote("Primeira", string.Empty);
             Note second = CreateNote("Segunda", string.Empty);
@@ -89,9 +119,7 @@ namespace DearNotes.Tests
             repository.Notes.Add(first);
             repository.Notes.Add(second);
 
-            using var viewModel = new MainViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = new MainViewModel(repository, dialogs);
 
             viewModel.SelectedNote = first;
 
@@ -101,7 +129,81 @@ namespace DearNotes.Tests
 
             Assert.DoesNotContain(first, repository.Notes);
             Assert.Same(second, viewModel.SelectedNote);
+            Assert.Single(dialogs.Confirmations);
             Assert.Equal(savesBeforeDelete + 1, repository.SavePendingChangesCalls);
+        }
+
+        [Fact]
+        public void DeleteSelectedNote_WhenConfirmationIsDeclined_KeepsNote()
+        {
+            var repository = new FakeNotesRepository();
+            Note note = CreateNote("Nota", "conteúdo");
+
+            repository.Notes.Add(note);
+
+            var dialogs = new RecordingDialogService
+            {
+                ConfirmResult = false
+            };
+
+            using var viewModel = new MainViewModel(repository, dialogs);
+
+            int savesBeforeDelete = repository.SavePendingChangesCalls;
+
+            viewModel.DeleteNoteCommand.Execute(null);
+
+            Assert.Contains(note, repository.Notes);
+            Assert.Single(dialogs.Confirmations);
+            Assert.Equal(savesBeforeDelete, repository.SavePendingChangesCalls);
+        }
+
+        [Fact]
+        public void ShowOnlyDesk_WhenEnabled_ShowsOnlyPinnedNotesAndSelectsOne()
+        {
+            var repository = new FakeNotesRepository();
+
+            Note pinned = CreateNote("Fixada", string.Empty, isPinned: true);
+            Note loose = CreateNote("Solta", string.Empty);
+
+            repository.Notes.Add(pinned);
+            repository.Notes.Add(loose);
+
+            using var viewModel = new MainViewModel(
+                repository,
+                new RecordingDialogService());
+
+            viewModel.SelectedNote = loose;
+            viewModel.ShowOnlyDesk = true;
+
+            Assert.Same(pinned, Assert.Single(VisibleNotes(viewModel)));
+            Assert.Same(pinned, viewModel.SelectedNote);
+            Assert.Equal(1, viewModel.VisibleNoteCount);
+
+            viewModel.ShowOnlyDesk = false;
+
+            Assert.Equal(2, VisibleNotes(viewModel).Length);
+        }
+
+        [Fact]
+        public void ToggleDeskPin_WhenDeskFilterIsActive_RemovesUnpinnedNote()
+        {
+            var repository = new FakeNotesRepository();
+            Note pinned = CreateNote("Fixada", string.Empty, isPinned: true);
+
+            repository.Notes.Add(pinned);
+
+            using var viewModel = new MainViewModel(
+                repository,
+                new RecordingDialogService());
+
+            viewModel.SelectedNote = pinned;
+            viewModel.ShowOnlyDesk = true;
+
+            viewModel.ToggleDeskPinCommand.Execute(null);
+
+            Assert.False(pinned.IsPinnedToDesk);
+            Assert.Empty(VisibleNotes(viewModel));
+            Assert.Null(viewModel.SelectedNote);
         }
 
         [Fact]
