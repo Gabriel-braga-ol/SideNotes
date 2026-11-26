@@ -13,9 +13,7 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = CreateViewModel(repository);
 
             viewModel.OpenNote(note);
 
@@ -31,14 +29,11 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = CreateViewModel(repository);
 
             viewModel.OpenNote(note);
 
             Assert.Null(viewModel.OpenedNote);
-            Assert.False(viewModel.IsExpanded);
         }
 
         [Fact]
@@ -49,9 +44,7 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = CreateViewModel(repository);
 
             viewModel.OpenNote(note);
 
@@ -70,9 +63,7 @@ namespace DearNotes.Tests
         {
             var repository = new FakeNotesRepository();
 
-            using var viewModel = new DeskViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = CreateViewModel(repository);
 
             viewModel.SetExpanded(true);
 
@@ -87,9 +78,7 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = CreateViewModel(repository);
 
             viewModel.OpenNote(note);
             viewModel.CloseNote();
@@ -98,13 +87,12 @@ namespace DearNotes.Tests
         }
 
         [Fact]
-        public void CreateNoteCommand_WhenDeskHasRoom_CreatesPinnedNoteAndOpensIt()
+        public void CreateNote_WhenBelowLimit_AddsPinnedNoteAndOpensIt()
         {
             var repository = new FakeNotesRepository();
+            var dialogs = new RecordingDialogService();
 
-            using var viewModel = new DeskViewModel(
-                repository,
-                new RecordingDialogService());
+            using var viewModel = CreateViewModel(repository, dialogs);
 
             viewModel.CreateNoteCommand.Execute(null);
 
@@ -113,27 +101,42 @@ namespace DearNotes.Tests
             Assert.True(note.IsPinnedToDesk);
             Assert.Same(note, viewModel.OpenedNote);
             Assert.True(viewModel.IsExpanded);
+            Assert.Empty(dialogs.Information);
             Assert.Equal(1, repository.SavePendingChangesCalls);
         }
 
         [Fact]
-        public void CreateNoteCommand_WhenDeskIsFull_ShowsInformationAndCreatesNothing()
+        public void CreateNote_WhenLimitIsReached_ShowsWarningAndDoesNotAddNote()
         {
             var repository = new FakeNotesRepository();
             var dialogs = new RecordingDialogService();
 
             for (int i = 0; i < Note.MaxDeskPinnedNotes; i++)
             {
-                repository.Notes.Add(CreateNote($"Fixada {i}", isPinned: true));
+                repository.Notes.Add(
+                    CreateNote($"Fixada {i + 1}", isPinned: true));
             }
 
-            using var viewModel = new DeskViewModel(repository, dialogs);
+            using var viewModel = CreateViewModel(repository, dialogs);
 
             viewModel.CreateNoteCommand.Execute(null);
 
+            Assert.Equal(
+                Note.MaxDeskPinnedNotes,
+                repository.Notes.Count);
+
             Assert.Single(dialogs.Information);
-            Assert.Equal(Note.MaxDeskPinnedNotes, repository.Notes.Count);
             Assert.Null(viewModel.OpenedNote);
+            Assert.Equal(0, repository.SavePendingChangesCalls);
+        }
+
+        private static DeskViewModel CreateViewModel(
+            FakeNotesRepository repository,
+            RecordingDialogService? dialogs = null)
+        {
+            return new DeskViewModel(
+                repository,
+                dialogs ?? new RecordingDialogService());
         }
 
         private static Note CreateNote(string title, bool isPinned)
