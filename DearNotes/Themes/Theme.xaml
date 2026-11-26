@@ -31,13 +31,15 @@
     <SolidColorBrush x:Key="PinIconBrush" Color="#7D828A"/>
     <SolidColorBrush x:Key="PinIconActiveBrush" Color="#626870"/>
 
-    <!-- Abas e cartões do Desk. -->
-    <SolidColorBrush x:Key="DeskTabBorderBrush" Color="#24000000"/>
-    <SolidColorBrush x:Key="DeskTabHoverBorderBrush" Color="#52000000"/>
-    <SolidColorBrush x:Key="DeskAddBackgroundBrush" Color="#D92B3036"/>
-    <SolidColorBrush x:Key="DeskAddHoverBackgroundBrush" Color="#F23A4047"/>
-    <SolidColorBrush x:Key="DeskAddBorderBrush" Color="#3DFFFFFF"/>
-    <SolidColorBrush x:Key="DeskAddGlyphBrush" Color="#F5FFFFFF"/>
+    <!-- Baralho recolhido, cartas e botão de nova nota do Desk. -->
+    <SolidColorBrush x:Key="DeskStripBackgroundBrush" Color="#4DFFFFFF"/>
+    <SolidColorBrush x:Key="DeskStripHoverBackgroundBrush" Color="#80FFFFFF"/>
+    <SolidColorBrush x:Key="DeskStripBorderBrush" Color="#33000000"/>
+    <SolidColorBrush x:Key="DeskPillBorderBrush" Color="#26000000"/>
+    <SolidColorBrush x:Key="DeskAddBackgroundBrush" Color="#D9F4F4F6"/>
+    <SolidColorBrush x:Key="DeskAddHoverBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="DeskAddBorderBrush" Color="#33000000"/>
+    <SolidColorBrush x:Key="DeskAddGlyphBrush" Color="#FF4A5058"/>
 
     <!-- Janela principal: superfície creme, cartões claros e textos quentes. -->
     <SolidColorBrush x:Key="AppBackdropBrush" Color="#F4EDE1"/>

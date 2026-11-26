@@ -10,7 +10,7 @@ namespace DearNotes.Tests
         private static readonly DpiScale defaultDpi = new(1, 1);
 
         [Fact]
-        public void ComputeSnapBounds_RightSide_AnchorsToRightMargin()
+        public void ComputeSnapBounds_RightSide_AnchorsToRightEdge()
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
                 workArea,
@@ -21,14 +21,14 @@ namespace DearNotes.Tests
                 verticalPosition: 0.5,
                 currentTopPixels: 0);
 
-            Assert.Equal(1888, bounds.Left);
+            Assert.Equal(1896, bounds.Left);
             Assert.Equal(24, bounds.Width);
             Assert.Equal(800, bounds.Height);
             Assert.Equal(140, bounds.Top);
         }
 
         [Fact]
-        public void ComputeSnapBounds_LeftSide_AnchorsToLeftMargin()
+        public void ComputeSnapBounds_LeftSide_AnchorsToLeftEdge()
         {
             Rect bounds = DeskGeometry.ComputeSnapBounds(
                 workArea,
@@ -39,7 +39,7 @@ namespace DearNotes.Tests
                 verticalPosition: 0.5,
                 currentTopPixels: 0);
 
-            Assert.Equal(8, bounds.Left);
+            Assert.Equal(0, bounds.Left);
         }
 
         [Theory]
@@ -96,7 +96,7 @@ namespace DearNotes.Tests
                 verticalPosition: 0.5,
                 currentTopPixels: 0);
 
-            Assert.Equal(1872, bounds.Left);
+            Assert.Equal(1884, bounds.Left);
             Assert.Equal(36, bounds.Width);
             Assert.Equal(900, bounds.Height);
             Assert.Equal(90, bounds.Top);
@@ -132,8 +132,8 @@ namespace DearNotes.Tests
                 verticalPosition: 0.5,
                 currentTopPixels: 0);
 
-            Assert.Equal(68, bounds.Width);
-            Assert.Equal(16, bounds.Left);
+            Assert.Equal(100, bounds.Width);
+            Assert.Equal(0, bounds.Left);
             Assert.True(bounds.Right <= workArea.Right);
             Assert.True(bounds.Bottom <= workArea.Bottom);
         }
@@ -152,7 +152,8 @@ namespace DearNotes.Tests
                 verticalPosition: 0.5,
                 currentTopPixels: 0);
 
-            Assert.Equal(1, bounds.Width);
+            Assert.Equal(20, bounds.Width);
+            Assert.Equal(28, bounds.Height);
             Assert.True(bounds.Left >= workArea.Left);
             Assert.True(bounds.Right <= workArea.Right);
             Assert.True(bounds.Top >= workArea.Top);
@@ -249,7 +250,7 @@ namespace DearNotes.Tests
         [Theory]
         [InlineData(0, 0)]
         [InlineData(1, 0)]
-        [InlineData(5, 70)]
+        [InlineData(5, 88)]
         public void ComputeFanStep_WithRoomForAllCards_UsesPreferredStep(
             int count,
             double expectedStep)
@@ -272,7 +273,7 @@ namespace DearNotes.Tests
                 availableHeight: 388,
                 preferredStep: DeskGeometry.FanStep);
 
-            Assert.Equal(50, step);
+            Assert.Equal(53, step);
         }
 
         [Fact]
@@ -296,7 +297,7 @@ namespace DearNotes.Tests
                 availableHeight: 900,
                 preferredStep: DeskGeometry.FanStep);
 
-            Assert.Equal(286, top);
+            Assert.Equal(274, top);
         }
 
         [Fact]
@@ -321,6 +322,83 @@ namespace DearNotes.Tests
                 preferredStep: DeskGeometry.FanStep);
 
             Assert.Equal(0, top);
+        }
+
+        [Theory]
+        [InlineData(true, 280)]
+        [InlineData(false, -256)]
+        public void ComputeFanCardLeft_ShowsOnlyTabInsidePanel(
+            bool isOnRight,
+            double expectedLeft)
+        {
+            double left = DeskGeometry.ComputeFanCardLeft(
+                isOnRight,
+                DeskGeometry.ExpandedWidth);
+
+            Assert.Equal(expectedLeft, left);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ComputeFanSlideOffset_RevealsWholeCardInsidePanel(
+            bool isOnRight)
+        {
+            double restingLeft = DeskGeometry.ComputeFanCardLeft(
+                isOnRight,
+                DeskGeometry.ExpandedWidth);
+
+            double revealedLeft =
+                restingLeft + DeskGeometry.ComputeFanSlideOffset(isOnRight);
+
+            double revealedRight = revealedLeft + DeskGeometry.FanCardWidth;
+
+            Assert.True(revealedLeft >= 0);
+            Assert.True(revealedRight <= DeskGeometry.ExpandedWidth);
+        }
+
+        [Fact]
+        public void ComputeTabCenterInset_CentersOnVisibleTab()
+        {
+            double inset = DeskGeometry.ComputeTabCenterInset();
+
+            Assert.Equal(23, inset);
+        }
+
+        [Fact]
+        public void ComputeAddButtonTop_PlacesButtonBelowLastCard()
+        {
+            double top = DeskGeometry.ComputeAddButtonTop(
+                count: 3,
+                cardHeight: 176,
+                availableHeight: 900,
+                preferredStep: 88);
+
+            Assert.Equal(274 + 176 + 2 * 88 + DeskGeometry.AddButtonGap, top);
+        }
+
+        [Fact]
+        public void ComputeAddButtonTop_WhenHeightIsTight_FollowsCompressedStack()
+        {
+            double top = DeskGeometry.ComputeAddButtonTop(
+                count: 5,
+                cardHeight: 176,
+                availableHeight: 388,
+                preferredStep: 88);
+
+            Assert.Equal(176 + 4 * 53 + DeskGeometry.AddButtonGap, top);
+        }
+
+        [Fact]
+        public void ComputeAddButtonTop_WithoutCards_CentersButton()
+        {
+            double top = DeskGeometry.ComputeAddButtonTop(
+                count: 0,
+                cardHeight: 176,
+                availableHeight: 500,
+                preferredStep: 88);
+
+            Assert.Equal((500 - DeskGeometry.AddButtonSize) / 2, top);
         }
     }
 }

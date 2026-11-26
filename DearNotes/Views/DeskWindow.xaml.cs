@@ -75,8 +75,9 @@ namespace DearNotes.Views
                 viewModel,
                 TabDeck,
                 FanCards,
+                AddNoteButton,
                 SetDeskWidth,
-                () => IsMouseOver,
+                IsPointerInsideDesk,
                 IsDragActive);
 
             keyboardNavigator = new DeskKeyboardNavigator(
@@ -121,6 +122,8 @@ namespace DearNotes.Views
 
             layout.UpdateSideLayout(viewModel.IsOnRight);
             layout.SnapToEdge(viewModel.IsOnRight, position.VerticalPosition);
+
+            fanAnimator.SyncAddButton();
         }
 
         private void DeskHandle_MouseLeftButtonDown(
@@ -157,7 +160,7 @@ namespace DearNotes.Views
             base.OnClosed(e);
         }
 
-        private void NoteTab_MouseLeftButtonDown(
+        private void NoteCard_MouseLeftButtonDown(
             object sender,
             MouseButtonEventArgs e)
         {
@@ -170,29 +173,12 @@ namespace DearNotes.Views
             OpenNote(note);
         }
 
-        private void DeskTab_MouseLeftButtonDown(
-            object sender,
-            MouseButtonEventArgs e)
+        private void NoteCard_SlideStateChanged(object sender, RoutedEventArgs e)
         {
-            if (sender is not FrameworkElement element ||
-                element.DataContext is not Note note) return;
-
-            e.Handled = true;
-            fanAnimator.StopCollapseTimer();
-
-            OpenNote(note);
-        }
-
-        private void DeskTab_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Enter && e.Key != Key.Space) return;
-
-            if (sender is not FrameworkElement element ||
-                element.DataContext is not Note note) return;
-
-            e.Handled = true;
-
-            OpenNote(note);
+            if (sender is FrameworkElement card)
+            {
+                fanAnimator.UpdateCardSlide(card);
+            }
         }
 
         private void DeskHandle_KeyDown(object sender, KeyEventArgs e)
@@ -200,7 +186,7 @@ namespace DearNotes.Views
             keyboardNavigator.HandleDeskKeyDown(sender, e);
         }
 
-        private void NoteTab_KeyDown(object sender, KeyEventArgs e)
+        private void NoteCard_KeyDown(object sender, KeyEventArgs e)
         {
             keyboardNavigator.HandleNoteKeyDown(sender, e);
         }
@@ -208,8 +194,12 @@ namespace DearNotes.Views
         private void DeskNotes_CollectionChanged(
             object? sender, NotifyCollectionChangedEventArgs e)
         {
-            Dispatcher.BeginInvoke(
-                new Action(() => layout.PositionNoteCards(viewModel.IsOnRight)));
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                layout.PositionNoteCards(viewModel.IsOnRight);
+
+                if (!viewModel.IsExpanded) fanAnimator.SyncAddButton();
+            }));
         }
 
         private void SetDeskWidth(double width)
@@ -236,6 +226,30 @@ namespace DearNotes.Views
             return dragController.IsDragging;
         }
 
+        private bool IsPointerInsideDesk()
+        {
+            try
+            {
+                Rect bounds = screenService.GetWindowBounds(this);
+                Point mouse = screenService.GetMousePosition();
+
+                return bounds.Contains(mouse);
+            }
+            catch (Exception ex) when (
+                ex is Win32Exception ||
+                ex is InvalidOperationException)
+            {
+                // A posição real do ponteiro evita recolher o leque quando a
+                // janela se move sob um cursor parado, mas o WPF perde o
+                // rastreamento do mouse nesse movimento.
+                System.Diagnostics.Debug.WriteLine(
+                    "Desk: não foi possível verificar o ponteiro: " +
+                    ex.Message);
+
+                return IsMouseOver;
+            }
+        }
+
         private void OpenNote(Note note)
         {
             bool alreadyOpened = ReferenceEquals(viewModel.OpenedNote, note);
@@ -255,7 +269,8 @@ namespace DearNotes.Views
                 editorWindow = new NoteEditorWindow(
                     viewModel,
                     screen,
-                    screenService);
+                    screenService,
+                    viewModel.IsOnRight);
                 editorWindow.Closed += EditorWindow_Closed;
                 editorWindow.Show();
             }

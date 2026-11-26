@@ -104,6 +104,14 @@ namespace DearNotes.Views
             deskHandle.HorizontalAlignment = alignment;
             addNoteButton.HorizontalAlignment = alignment;
 
+            // Centralizar o baralho na mesma faixa do leque mantém as pílulas
+            // na altura em que as cartas vão surgir.
+            deskHandle.Margin = isOnRight
+                ? new Thickness(
+                    0, 0, DeskGeometry.HandleEdgeGap, DeskGeometry.AddButtonReserve)
+                : new Thickness(
+                    DeskGeometry.HandleEdgeGap, 0, 0, DeskGeometry.AddButtonReserve);
+
             PositionNoteCards(isOnRight);
         }
 
@@ -192,9 +200,7 @@ namespace DearNotes.Views
         {
             int count = fanCards.Items.Count;
 
-            double availableHeight = Math.Max(
-                1,
-                preferredHeight - DeskGeometry.AddButtonReserve);
+            double availableHeight = GetFanAvailableHeight();
 
             double step = DeskGeometry.ComputeFanStep(
                 count,
@@ -208,11 +214,11 @@ namespace DearNotes.Views
                 availableHeight,
                 DeskGeometry.FanStep);
 
-            double left = isOnRight
-                ? DeskGeometry.ExpandedWidth -
-                  DeskGeometry.FanCardWidth -
-                  DeskGeometry.FanEdgeMargin
-                : DeskGeometry.FanEdgeMargin;
+            double left = DeskGeometry.ComputeFanCardLeft(
+                isOnRight,
+                DeskGeometry.ExpandedWidth);
+
+            PositionAddButton(count, isOnRight);
 
             for (int i = 0; i < count; i++)
             {
@@ -229,6 +235,34 @@ namespace DearNotes.Views
                 Canvas.SetLeft(container, left);
                 Canvas.SetTop(container, top + i * step);
             }
+        }
+
+        private void PositionAddButton(int count, bool isOnRight)
+        {
+            double top = DeskGeometry.ComputeAddButtonTop(
+                count,
+                DeskGeometry.FanCardHeight,
+                GetFanAvailableHeight(),
+                DeskGeometry.FanStep);
+
+            double sideInset = Math.Max(
+                0,
+                DeskGeometry.ComputeTabCenterInset() -
+                DeskGeometry.AddButtonSize / 2);
+
+            addNoteButton.Width = DeskGeometry.AddButtonSize;
+            addNoteButton.Height = DeskGeometry.AddButtonSize;
+
+            addNoteButton.Margin = isOnRight
+                ? new Thickness(0, top, sideInset, 0)
+                : new Thickness(sideInset, top, 0, 0);
+        }
+
+        private double GetFanAvailableHeight()
+        {
+            return Math.Max(
+                1,
+                preferredHeight - DeskGeometry.AddButtonReserve);
         }
 
         public void SavePosition(bool isOnRight)

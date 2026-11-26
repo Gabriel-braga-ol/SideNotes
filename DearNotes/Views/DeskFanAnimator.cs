@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -11,27 +12,44 @@ namespace DearNotes.Views
 {
     /// <summary>
     /// Conduz a abertura e o recolhimento do leque, o escalonamento das
-    /// cartas, as transições do baralho e o atraso de recolhimento.
+    /// cartas, o deslize da carta escolhida, as transições do baralho e do
+    /// botão de nova nota e o atraso de recolhimento.
     /// </summary>
     internal sealed class DeskFanAnimator
     {
+        private const string NoteCardName = "NoteCard";
+
         private const int ExpandStaggerMilliseconds = 45;
 
         private const int CollapseStaggerMilliseconds = 30;
 
-        private const int CardExpandMilliseconds = 300;
+        private const int CardExpandMilliseconds = 320;
 
         private const int CardCollapseMilliseconds = 180;
 
+        private const int CardSlideOutMilliseconds = 300;
+
+        private const int CardSlideBackMilliseconds = 220;
+
         private const int HandleFadeMilliseconds = 140;
 
-        private const int ProximityDelayMilliseconds = 160;
+        private const int AddButtonFadeMilliseconds = 200;
+
+        private const int ProximityDelayMilliseconds = 90;
 
         private const int CollapseDelayMilliseconds = 450;
 
-        private const double HiddenOffset = 42;
+        /// <summary>
+        /// Distância extra além da aba para que a carta comece totalmente
+        /// escondida atrás da borda da tela.
+        /// </summary>
+        private const double HiddenOvershoot = 12;
 
-        private const double HiddenRise = 16;
+        private const double TileOvershootAmplitude = 0.35;
+
+        private const double SlideOvershootAmplitude = 0.2;
+
+        private const int RestingZIndex = 0;
 
         private readonly DeskViewModel viewModel;
 
@@ -39,9 +57,11 @@ namespace DearNotes.Views
 
         private readonly ItemsControl fanCards;
 
+        private readonly FrameworkElement addNoteButton;
+
         private readonly Action<double> setDeskWidth;
 
-        private readonly Func<bool> isMouseOver;
+        private readonly Func<bool> isPointerInsideDesk;
 
         private readonly Func<bool> isDragging;
 
@@ -59,19 +79,29 @@ namespace DearNotes.Views
 
         private int animationVersion;
 
+        // Enquanto as telhas entram, elas passam sob o ponteiro parado; o
+        // deslize só vale depois que todas assentam.
+        private bool isFanSettling;
+
+        // Cada carta que sai do baralho fica acima da anterior, inclusive
+        // da que ainda está voltando ao lugar.
+        private int slideZIndex = RestingZIndex;
+
         public DeskFanAnimator(
             DeskViewModel viewModel,
             FrameworkElement deskHandle,
             ItemsControl fanCards,
+            FrameworkElement addNoteButton,
             Action<double> setDeskWidth,
-            Func<bool> isMouseOver,
+            Func<bool> isPointerInsideDesk,
             Func<bool> isDragging)
         {
             this.viewModel = viewModel;
             this.deskHandle = deskHandle;
             this.fanCards = fanCards;
+            this.addNoteButton = addNoteButton;
             this.setDeskWidth = setDeskWidth;
-            this.isMouseOver = isMouseOver;
+            this.isPointerInsideDesk = isPointerInsideDesk;
             this.isDragging = isDragging;
 
             proximityTimer.Tick += ProximityTimer_Tick;
@@ -149,7 +179,39 @@ namespace DearNotes.Views
             deskHandle.Visibility = Visibility.Visible;
             deskHandle.IsHitTestVisible = true;
 
+            SyncAddButton();
+
             setDeskWidth(DeskGeometry.CollapsedWidth);
+        }
+
+        /// <summary>
+        /// Mostra o botão de nova nota com o leque aberto ou quando ainda não
+        /// há notas fixadas, já que nesse caso não há baralho para abrir.
+        /// </summary>
+        public void SyncAddButton()
+        {
+            bool visible = viewModel.IsExpanded || viewModel.DeskNotes.IsEmpty;
+
+            addNoteButton.BeginAnimation(UIElement.OpacityProperty, null);
+            addNoteButton.Opacity = 1;
+            addNoteButton.Visibility = visible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            ResetTranslate(GetTranslate(addNoteButton));
+        }
+
+        /// <summary>
+        /// Tira a carta do baralho enquanto ela está sob o ponteiro ou com o
+        /// foco do teclado, e a devolve ao lugar quando deixa de estar.
+        /// </summary>
+        public void UpdateCardSlide(FrameworkElement noteCard)
+        {
+            if (!viewModel.IsExpanded || isFanSettling || isDragging()) return;
+
+            bool chosen = noteCard.IsMouseOver || noteCard.IsKeyboardFocused;
+
+            SlideCard(noteCard, chosen);
         }
 
         public void Detach()
@@ -165,7 +227,7 @@ namespace DearNotes.Views
         {
             proximityTimer.Stop();
 
-            if (!isMouseOver() || isDragging()) return;
+            if (!isPointerInsideDesk() || isDragging()) return;
 
             viewModel.SetExpanded(true);
         }
@@ -174,7 +236,7 @@ namespace DearNotes.Views
         {
             collapseTimer.Stop();
 
-            if (!isMouseOver() && !isDragging())
+            if (!isPointerInsideDesk() && !isDragging())
             {
                 viewModel.SetExpanded(false);
             }
@@ -196,15 +258,13 @@ namespace DearNotes.Views
 
         private void Expand(int version)
         {
-            int count = fanCards.Items.Count;
-
-            if (count == 0)
+            if (fanCards.Items.Count == 0)
             {
                 CollapseImmediately();
                 return;
             }
 
-            AnimateHandleOpacity(0, HandleFadeMilliseconds, () =>
+            AnimateOpacity(deskHandle, 0, HandleFadeMilliseconds, 0, () =>
             {
                 if (version == animationVersion)
                 {
@@ -218,70 +278,134 @@ namespace DearNotes.Views
 
             fanCards.Visibility = Visibility.Visible;
             fanCards.IsHitTestVisible = true;
+            // Os contêineres só existem depois que o leque fica visível.
             fanCards.UpdateLayout();
 
-            double direction = viewModel.IsOnRight ? 1 : -1;
+            List<FrameworkElement> cards = GetCards();
 
-            for (int i = 0; i < count; i++)
+            double hiddenOffset = GetHiddenOffset();
+
+            var tileEasing = new BackEase
             {
-                if (GetCard(i) is not FrameworkElement card) continue;
+                EasingMode = EasingMode.EaseOut,
+                Amplitude = TileOvershootAmplitude
+            };
 
-                StageCard(
-                    card,
-                    fromX: direction * HiddenOffset,
-                    fromY: HiddenRise,
+            isFanSettling = true;
+
+            // As telhas entram de cima para baixo, uma após a outra.
+            for (int i = 0; i < cards.Count; i++)
+            {
+                ResetCardSlide(cards[i]);
+
+                // A última telha é a última a assentar; ela libera o deslize.
+                Action? completed = i == cards.Count - 1
+                    ? () => FinishExpand(version)
+                    : null;
+
+                StageElement(
+                    cards[i],
+                    fromX: hiddenOffset,
                     fromOpacity: 0,
                     toX: 0,
-                    toY: 0,
                     toOpacity: 1,
                     milliseconds: CardExpandMilliseconds,
-                    delayMilliseconds: i * ExpandStaggerMilliseconds);
+                    delayMilliseconds: i * ExpandStaggerMilliseconds,
+                    movementEasing: tileEasing,
+                    completed: completed);
             }
+
+            if (cards.Count == 0) isFanSettling = false;
+
+            ShowAddButton(cards.Count * ExpandStaggerMilliseconds);
+        }
+
+        private void FinishExpand(int version)
+        {
+            if (version != animationVersion) return;
+
+            isFanSettling = false;
+
+            foreach (FrameworkElement card in GetCards())
+            {
+                if (FindNoteCard(card) is FrameworkElement noteCard &&
+                    (noteCard.IsMouseOver || noteCard.IsKeyboardFocused))
+                {
+                    SlideCard(noteCard, chosen: true);
+                }
+            }
+        }
+
+        private void ShowAddButton(int delayMilliseconds)
+        {
+            addNoteButton.Visibility = Visibility.Visible;
+
+            StageElement(
+                addNoteButton,
+                fromX: GetHiddenOffset() / 2,
+                fromOpacity: 0,
+                toX: 0,
+                toOpacity: 1,
+                milliseconds: AddButtonFadeMilliseconds,
+                delayMilliseconds: delayMilliseconds,
+                movementEasing: new CubicEase
+                {
+                    EasingMode = EasingMode.EaseOut
+                });
         }
 
         private void Collapse(int version)
         {
-            int count = fanCards.Items.Count;
-
             deskHandle.Visibility = Visibility.Visible;
             deskHandle.IsHitTestVisible = false;
 
-            AnimateHandleOpacity(1, HandleFadeMilliseconds);
+            AnimateOpacity(deskHandle, 1, HandleFadeMilliseconds, 0);
 
             fanCards.IsHitTestVisible = false;
 
-            double direction = viewModel.IsOnRight ? 1 : -1;
-
-            bool staged = false;
-
-            for (int i = 0; i < count; i++)
+            if (!viewModel.DeskNotes.IsEmpty)
             {
-                if (GetCard(i) is not FrameworkElement card) continue;
+                AnimateOpacity(addNoteButton, 0, HandleFadeMilliseconds, 0);
+            }
 
-                staged = true;
+            List<FrameworkElement> cards = GetCards();
 
+            if (cards.Count == 0)
+            {
+                FinishCollapse(version);
+                return;
+            }
+
+            double hiddenOffset = GetHiddenOffset();
+
+            var easing = new CubicEase
+            {
+                EasingMode = EasingMode.EaseIn
+            };
+
+            for (int i = 0; i < cards.Count; i++)
+            {
                 // A primeira carta é a última a terminar; ela fecha o recolhimento.
                 Action? completed = i == 0
                     ? () => FinishCollapse(version)
                     : null;
 
-                StageCard(
-                    card,
-                    fromX: 0,
-                    fromY: 0,
-                    fromOpacity: 1,
-                    toX: direction * HiddenOffset,
-                    toY: HiddenRise / 2,
+                if (FindNoteCard(cards[i]) is FrameworkElement noteCard)
+                {
+                    SlideCard(noteCard, chosen: false);
+                }
+
+                StageElement(
+                    cards[i],
+                    fromX: GetTranslate(cards[i]).X,
+                    fromOpacity: cards[i].Opacity,
+                    toX: hiddenOffset,
                     toOpacity: 0,
                     milliseconds: CardCollapseMilliseconds,
                     delayMilliseconds:
-                        (count - 1 - i) * CollapseStaggerMilliseconds,
+                        (cards.Count - 1 - i) * CollapseStaggerMilliseconds,
+                    movementEasing: easing,
                     completed: completed);
-            }
-
-            if (!staged)
-            {
-                FinishCollapse(version);
             }
         }
 
@@ -298,7 +422,104 @@ namespace DearNotes.Views
             deskHandle.Visibility = Visibility.Visible;
             deskHandle.IsHitTestVisible = true;
 
+            SyncAddButton();
+
             setDeskWidth(DeskGeometry.CollapsedWidth);
+        }
+
+        private void SlideCard(FrameworkElement noteCard, bool chosen)
+        {
+            if (ItemsControl.ContainerFromElement(fanCards, noteCard)
+                    is not UIElement container)
+            {
+                return;
+            }
+
+            TranslateTransform translate = GetTranslate(noteCard);
+
+            double destination = chosen
+                ? DeskGeometry.ComputeFanSlideOffset(viewModel.IsOnRight)
+                : 0;
+
+            DoubleAnimation animation = CreateSlideAnimation(
+                translate.X,
+                destination,
+                chosen);
+
+            if (chosen)
+            {
+                Panel.SetZIndex(container, ++slideZIndex);
+            }
+            else
+            {
+                animation.Completed += (_, _) =>
+                    LowerCardWhenReleased(noteCard, container);
+            }
+
+            translate.BeginAnimation(
+                TranslateTransform.XProperty,
+                animation,
+                HandoffBehavior.SnapshotAndReplace);
+        }
+
+        private static DoubleAnimation CreateSlideAnimation(
+            double from,
+            double to,
+            bool chosen)
+        {
+            // A saída passa um pouco do ponto e assenta, como uma carta puxada;
+            // a volta é direta para não esbarrar nas telhas vizinhas.
+            IEasingFunction easing = chosen
+                ? new BackEase
+                {
+                    EasingMode = EasingMode.EaseOut,
+                    Amplitude = SlideOvershootAmplitude
+                }
+                : new CubicEase
+                {
+                    EasingMode = EasingMode.EaseOut
+                };
+
+            return new DoubleAnimation
+            {
+                From = from,
+                To = to,
+                Duration = TimeSpan.FromMilliseconds(chosen
+                    ? CardSlideOutMilliseconds
+                    : CardSlideBackMilliseconds),
+                EasingFunction = easing
+            };
+        }
+
+        private static void LowerCardWhenReleased(
+            FrameworkElement noteCard,
+            UIElement container)
+        {
+            if (noteCard.IsMouseOver || noteCard.IsKeyboardFocused) return;
+
+            Panel.SetZIndex(container, RestingZIndex);
+        }
+
+        private double GetHiddenOffset()
+        {
+            double direction = viewModel.IsOnRight ? 1 : -1;
+
+            return direction * (DeskGeometry.FanTabPeek + HiddenOvershoot);
+        }
+
+        private List<FrameworkElement> GetCards()
+        {
+            var cards = new List<FrameworkElement>(fanCards.Items.Count);
+
+            for (int i = 0; i < fanCards.Items.Count; i++)
+            {
+                if (GetCard(i) is FrameworkElement card)
+                {
+                    cards.Add(card);
+                }
+            }
+
+            return cards;
         }
 
         private FrameworkElement? GetCard(int index)
@@ -307,32 +528,32 @@ namespace DearNotes.Views
                 .ContainerFromIndex(index) as FrameworkElement;
         }
 
-        private static void StageCard(
-            FrameworkElement card,
+        private static FrameworkElement? FindNoteCard(FrameworkElement container)
+        {
+            if (container is not ContentPresenter presenter) return null;
+
+            return presenter.ContentTemplate?
+                .FindName(NoteCardName, presenter) as FrameworkElement;
+        }
+
+        private static void StageElement(
+            FrameworkElement element,
             double fromX,
-            double fromY,
             double fromOpacity,
             double toX,
-            double toY,
             double toOpacity,
             int milliseconds,
             int delayMilliseconds,
+            IEasingFunction movementEasing,
             Action? completed = null)
         {
-            var translate = GetTranslate(card);
+            TranslateTransform translate = GetTranslate(element);
 
-            card.BeginAnimation(UIElement.OpacityProperty, null);
+            element.BeginAnimation(UIElement.OpacityProperty, null);
             translate.BeginAnimation(TranslateTransform.XProperty, null);
-            translate.BeginAnimation(TranslateTransform.YProperty, null);
 
-            card.Opacity = fromOpacity;
+            element.Opacity = fromOpacity;
             translate.X = fromX;
-            translate.Y = fromY;
-
-            var easing = new CubicEase
-            {
-                EasingMode = EasingMode.EaseOut
-            };
 
             var opacityAnimation = new DoubleAnimation
             {
@@ -340,7 +561,10 @@ namespace DearNotes.Views
                 To = toOpacity,
                 Duration = TimeSpan.FromMilliseconds(milliseconds),
                 BeginTime = TimeSpan.FromMilliseconds(delayMilliseconds),
-                EasingFunction = easing
+                EasingFunction = new CubicEase
+                {
+                    EasingMode = EasingMode.EaseOut
+                }
             };
 
             if (completed is not null)
@@ -348,67 +572,44 @@ namespace DearNotes.Views
                 opacityAnimation.Completed += (_, _) => completed();
             }
 
-            card.BeginAnimation(
+            element.BeginAnimation(
                 UIElement.OpacityProperty,
                 opacityAnimation,
                 HandoffBehavior.SnapshotAndReplace);
 
-            AnimateTransform(
-                translate,
-                TranslateTransform.XProperty,
-                toX,
-                milliseconds,
-                delayMilliseconds,
-                easing);
-
-            AnimateTransform(
-                translate,
-                TranslateTransform.YProperty,
-                toY,
-                milliseconds,
-                delayMilliseconds,
-                easing);
-        }
-
-        private static void AnimateTransform(
-            TranslateTransform transform,
-            DependencyProperty property,
-            double destination,
-            int milliseconds,
-            int delayMilliseconds,
-            IEasingFunction easing)
-        {
-            var animation = new DoubleAnimation
+            var movementAnimation = new DoubleAnimation
             {
-                From = (double)transform.GetValue(property),
-                To = destination,
+                From = fromX,
+                To = toX,
                 Duration = TimeSpan.FromMilliseconds(milliseconds),
                 BeginTime = TimeSpan.FromMilliseconds(delayMilliseconds),
-                EasingFunction = easing
+                EasingFunction = movementEasing
             };
 
-            transform.BeginAnimation(
-                property,
-                animation,
+            translate.BeginAnimation(
+                TranslateTransform.XProperty,
+                movementAnimation,
                 HandoffBehavior.SnapshotAndReplace);
         }
 
-        private void AnimateHandleOpacity(
+        private static void AnimateOpacity(
+            UIElement element,
             double destination,
             int milliseconds,
+            int delayMilliseconds,
             Action? completed = null)
         {
-            deskHandle.BeginAnimation(UIElement.OpacityProperty, null);
+            double current = element.Opacity;
 
-            double current = deskHandle.Opacity;
-
-            deskHandle.Opacity = destination;
+            element.BeginAnimation(UIElement.OpacityProperty, null);
+            element.Opacity = destination;
 
             var animation = new DoubleAnimation
             {
                 From = current,
                 To = destination,
                 Duration = TimeSpan.FromMilliseconds(milliseconds),
+                BeginTime = TimeSpan.FromMilliseconds(delayMilliseconds),
                 FillBehavior = FillBehavior.Stop,
                 EasingFunction = new CubicEase
                 {
@@ -421,50 +622,59 @@ namespace DearNotes.Views
                 animation.Completed += (_, _) => completed();
             }
 
-            deskHandle.BeginAnimation(
+            element.BeginAnimation(
                 UIElement.OpacityProperty,
                 animation,
                 HandoffBehavior.SnapshotAndReplace);
         }
 
         private static TranslateTransform GetTranslate(
-            FrameworkElement card)
+            FrameworkElement element)
         {
-            if (card.RenderTransform is TranslateTransform current)
+            if (element.RenderTransform is TranslateTransform current &&
+                !current.IsFrozen)
             {
                 return current;
             }
 
             var translate = new TranslateTransform();
 
-            card.RenderTransform = translate;
+            element.RenderTransform = translate;
 
             return translate;
         }
 
+        private static void ResetTranslate(TranslateTransform translate)
+        {
+            translate.BeginAnimation(TranslateTransform.XProperty, null);
+            translate.BeginAnimation(TranslateTransform.YProperty, null);
+
+            translate.X = 0;
+            translate.Y = 0;
+        }
+
+        private static void ResetCardSlide(FrameworkElement container)
+        {
+            Panel.SetZIndex(container, RestingZIndex);
+
+            if (FindNoteCard(container) is FrameworkElement noteCard)
+            {
+                ResetTranslate(GetTranslate(noteCard));
+            }
+        }
+
         private void ResetCardAnimations()
         {
-            int count = fanCards.Items.Count;
+            isFanSettling = false;
+            slideZIndex = RestingZIndex;
 
-            for (int i = 0; i < count; i++)
+            foreach (FrameworkElement card in GetCards())
             {
-                if (GetCard(i) is not FrameworkElement card) continue;
-
                 card.BeginAnimation(UIElement.OpacityProperty, null);
                 card.Opacity = 1;
 
-                var translate = GetTranslate(card);
-
-                translate.BeginAnimation(
-                    TranslateTransform.XProperty,
-                    null);
-
-                translate.BeginAnimation(
-                    TranslateTransform.YProperty,
-                    null);
-
-                translate.X = 0;
-                translate.Y = 0;
+                ResetTranslate(GetTranslate(card));
+                ResetCardSlide(card);
             }
         }
     }
