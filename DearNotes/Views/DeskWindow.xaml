@@ -1,9 +1,10 @@
 <Window x:Class="DearNotes.Views.DeskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:DearNotes.Views.Converters"
         Title="DearNotes — Desk"
-        Width="36"
-        Height="560"
+        Width="40"
+        Height="620"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -17,16 +18,23 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
+    <Window.Resources>
+        <converters:TabLabelConverter x:Key="TabLabel"/>
+    </Window.Resources>
+
+    <!-- O fundo transparente ainda recebe o mouse: a faixa inteira funciona
+         como zona de proximidade para abrir o leque. -->
     <Grid x:Name="DeskRoot"
           Background="Transparent"
           KeyboardNavigation.TabNavigation="Cycle">
 
-        <!-- Leque: cartas sobrepostas como telhas, cada uma com a aba vertical da nota. -->
+        <!-- Leque: cartas sobrepostas como telhas; em repouso só a aba fica visível. -->
         <ItemsControl x:Name="FanCards"
                       ItemsSource="{Binding DeskNotes}"
                       Visibility="Collapsed"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
+                      Focusable="False"
                       KeyboardNavigation.TabIndex="1"
                       ClipToBounds="False">
 
@@ -38,21 +46,10 @@
 
             <ItemsControl.ItemContainerStyle>
                 <Style TargetType="ContentPresenter">
-                    <Setter Property="Panel.ZIndex" Value="0"/>
                     <Setter Property="ClipToBounds" Value="False"/>
 
                     <EventSetter Event="Loaded"
                                  Handler="NoteContainer_Loaded"/>
-
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Panel.ZIndex" Value="100"/>
-                        </Trigger>
-
-                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                            <Setter Property="Panel.ZIndex" Value="100"/>
-                        </Trigger>
-                    </Style.Triggers>
                 </Style>
             </ItemsControl.ItemContainerStyle>
 
@@ -60,65 +57,73 @@
                 <DataTemplate>
                     <Border x:Name="NoteCard"
                             Background="{Binding Color}"
-                            CornerRadius="14"
+                            CornerRadius="12"
                             BorderBrush="{StaticResource NoteCardBorderBrush}"
                             BorderThickness="1"
                             Cursor="Hand"
                             Focusable="True"
                             FocusVisualStyle="{x:Null}"
-                            KeyDown="NoteTab_KeyDown"
+                            KeyDown="NoteCard_KeyDown"
+                            MouseLeftButtonDown="NoteCard_MouseLeftButtonDown"
+                            GotKeyboardFocus="NoteCard_KeyboardFocusChanged"
+                            LostKeyboardFocus="NoteCard_KeyboardFocusChanged"
                             AutomationProperties.Name="{Binding Title}"
-                            AutomationProperties.HelpText="Pressione Enter para abrir a nota e Escape para recolher o Desk."
-                            MouseLeftButtonDown="NoteTab_MouseLeftButtonDown">
+                            AutomationProperties.HelpText="Pressione Enter para abrir a nota e Escape para recolher o Desk.">
+
+                        <!-- Deslocamento da carta escolhida, conduzido pelo DeskFanAnimator. -->
+                        <Border.RenderTransform>
+                            <TranslateTransform/>
+                        </Border.RenderTransform>
 
                         <Border.Effect>
                             <DropShadowEffect Color="{StaticResource ShadowColor}"
-                                              Direction="315"
-                                              BlurRadius="16"
-                                              ShadowDepth="4"
-                                              Opacity="0.20"/>
+                                              Direction="270"
+                                              BlurRadius="14"
+                                              ShadowDepth="3"
+                                              Opacity="0.18"/>
                         </Border.Effect>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="34"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                        <DockPanel LastChildFill="True">
 
-                            <!-- Aba vertical com o nome da nota. -->
-                            <Grid Grid.Column="0"
+                            <!-- Aba vertical com o nome da nota, voltada para a borda da tela. -->
+                            <Grid x:Name="NoteTabColumn"
+                                  DockPanel.Dock="Left"
+                                  Width="34"
                                   ClipToBounds="True">
 
-                                <Border Width="1"
-                                        Margin="0,10"
-                                        HorizontalAlignment="Right"
-                                        Background="{StaticResource NoteTabDividerBrush}"/>
+                                <Line x:Name="NoteTabDivider"
+                                      X1="0.5"
+                                      X2="0.5"
+                                      Y1="0"
+                                      Y2="{Binding ActualHeight,
+                                                   ElementName=NoteTabColumn}"
+                                      Margin="0,10"
+                                      HorizontalAlignment="Right"
+                                      Stroke="{StaticResource NoteTabDividerBrush}"
+                                      StrokeThickness="1"
+                                      StrokeDashArray="3 3"/>
 
-                                <Grid Height="64"
-                                      Margin="0,4,0,0"
-                                      VerticalAlignment="Top">
+                                <TextBlock Width="72"
+                                           Margin="0,12,0,0"
+                                           Text="{Binding Title,
+                                                          Converter={StaticResource TabLabel}}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource NoteTabTitleBrush}"
+                                           TextAlignment="Right"
+                                           TextTrimming="CharacterEllipsis"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Top"
+                                           IsHitTestVisible="False">
 
-                                    <TextBlock Width="56"
-                                               Text="{Binding Title}"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               Foreground="{StaticResource NoteTabTitleBrush}"
-                                               TextAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               IsHitTestVisible="False">
-
-                                        <TextBlock.RenderTransform>
-                                            <RotateTransform Angle="-90"/>
-                                        </TextBlock.RenderTransform>
-                                    </TextBlock>
-                                </Grid>
+                                    <TextBlock.LayoutTransform>
+                                        <RotateTransform Angle="-90"/>
+                                    </TextBlock.LayoutTransform>
+                                </TextBlock>
                             </Grid>
 
-                            <!-- Corpo da nota: título e prévia. -->
-                            <Grid Grid.Column="1"
-                                  Margin="16,14,18,14"
+                            <!-- Corpo da nota: título e texto, revelados quando a carta sai do baralho. -->
+                            <Grid Margin="14,13,16,14"
                                   ClipToBounds="True">
 
                                 <Grid.RowDefinitions>
@@ -128,11 +133,11 @@
 
                                 <TextBlock Grid.Row="0"
                                            Text="{Binding Title}"
-                                           FontSize="15"
+                                           FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource TextStrongBrush}"
                                            TextTrimming="CharacterEllipsis"
-                                           Margin="0,0,0,8"/>
+                                           Margin="0,0,0,7"/>
 
                                 <TextBlock Grid.Row="1"
                                            Text="{Binding Content}"
@@ -142,28 +147,21 @@
                                            TextWrapping="Wrap"
                                            TextTrimming="CharacterEllipsis"/>
                             </Grid>
-                        </Grid>
+                        </DockPanel>
                     </Border>
 
                     <DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding IsMouseOver,
-                                                     ElementName=NoteCard}"
-                                     Value="True">
+                        <DataTrigger Binding="{Binding DataContext.IsOnRight,
+                                                     RelativeSource={RelativeSource AncestorType=Window}}"
+                                     Value="False">
 
-                            <Setter TargetName="NoteCard"
-                                    Property="BorderBrush"
-                                    Value="{StaticResource NoteCardActiveBorderBrush}"/>
+                            <Setter TargetName="NoteTabColumn"
+                                    Property="DockPanel.Dock"
+                                    Value="Right"/>
 
-                            <Setter TargetName="NoteCard"
-                                    Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect Color="{StaticResource ShadowColor}"
-                                                      Direction="315"
-                                                      BlurRadius="22"
-                                                      ShadowDepth="7"
-                                                      Opacity="0.26"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="NoteTabDivider"
+                                    Property="HorizontalAlignment"
+                                    Value="Left"/>
                         </DataTrigger>
 
                         <DataTrigger Binding="{Binding IsKeyboardFocused,
@@ -183,125 +181,88 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Baralho recolhido: abas coloridas empilhadas acima do botão de nova nota. -->
-        <StackPanel x:Name="TabDeck"
-                    Width="34"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Bottom"
-                    Margin="0,0,0,46"
-                    Background="Transparent"
-                    Cursor="SizeAll"
-                    Focusable="True"
-                    FocusVisualStyle="{x:Null}"
-                    KeyDown="DeskHandle_KeyDown"
-                    KeyboardNavigation.TabIndex="0"
-                    AutomationProperties.Name="Notas fixadas no Desk"
-                    AutomationProperties.HelpText="Aproxime o ponteiro para abrir o leque ou pressione Enter.">
+        <!-- Baralho recolhido: uma pílula na cor de cada nota fixada. -->
+        <Grid x:Name="TabDeck"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Center"
+              Background="Transparent"
+              Cursor="Hand"
+              Focusable="True"
+              FocusVisualStyle="{x:Null}"
+              KeyDown="DeskHandle_KeyDown"
+              MouseLeftButtonDown="DeskHandle_MouseLeftButtonDown"
+              KeyboardNavigation.TabIndex="0"
+              AutomationProperties.Name="Notas fixadas no Desk"
+              AutomationProperties.HelpText="Aproxime o ponteiro para abrir o leque ou pressione Enter.">
 
-            <ItemsControl x:Name="NoteTabs"
-                          ItemsSource="{Binding DeskNotes}">
+            <Border Padding="4"
+                    CornerRadius="7"
+                    BorderThickness="1">
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border x:Name="DeskTab"
-                                Width="34"
-                                Height="92"
-                                Margin="0,0,0,6"
-                                Background="{Binding Color}"
-                                CornerRadius="10"
-                                BorderBrush="{StaticResource DeskTabBorderBrush}"
-                                BorderThickness="1"
-                                Cursor="Hand"
-                                Focusable="True"
-                                FocusVisualStyle="{x:Null}"
-                                KeyDown="DeskTab_KeyDown"
-                                AutomationProperties.Name="{Binding Title}"
-                                AutomationProperties.HelpText="Pressione Enter para abrir a nota."
-                                MouseLeftButtonDown="DeskTab_MouseLeftButtonDown">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background"
+                                Value="{StaticResource DeskStripBackgroundBrush}"/>
+                        <Setter Property="BorderBrush"
+                                Value="{StaticResource DeskStripBorderBrush}"/>
 
-                            <Border.Effect>
-                                <DropShadowEffect Color="{StaticResource ShadowColor}"
-                                                  Direction="180"
-                                                  BlurRadius="10"
-                                                  ShadowDepth="2"
-                                                  Opacity="0.20"/>
-                            </Border.Effect>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems,
+                                                         ElementName=NoteTabs}"
+                                         Value="False">
+                                <Setter Property="Visibility"
+                                        Value="Collapsed"/>
+                            </DataTrigger>
 
-                            <Grid ClipToBounds="True">
-
-                                <Border Width="1"
-                                        Margin="0,10"
-                                        HorizontalAlignment="Right"
-                                        Background="{StaticResource NoteTabDividerBrush}"/>
-
-                                <TextBlock Width="76"
-                                           Text="{Binding Title}"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource NoteTabTitleBrush}"
-                                           TextAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           IsHitTestVisible="False">
-
-                                    <TextBlock.RenderTransform>
-                                        <RotateTransform Angle="-90"/>
-                                    </TextBlock.RenderTransform>
-                                </TextBlock>
-                            </Grid>
-                        </Border>
-
-                        <DataTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsMouseOver,
-                                                         ElementName=DeskTab}"
+                                                         ElementName=TabDeck}"
                                          Value="True">
-
-                                <Setter TargetName="DeskTab"
-                                        Property="BorderBrush"
-                                        Value="{StaticResource DeskTabHoverBorderBrush}"/>
-
-                                <Setter TargetName="DeskTab"
-                                        Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect Color="{StaticResource ShadowColor}"
-                                                          Direction="180"
-                                                          BlurRadius="14"
-                                                          ShadowDepth="3"
-                                                          Opacity="0.26"/>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter Property="Background"
+                                        Value="{StaticResource DeskStripHoverBackgroundBrush}"/>
                             </DataTrigger>
 
                             <DataTrigger Binding="{Binding IsKeyboardFocused,
-                                                         ElementName=DeskTab}"
+                                                         ElementName=TabDeck}"
                                          Value="True">
-
-                                <Setter TargetName="DeskTab"
-                                        Property="BorderBrush"
+                                <Setter Property="BorderBrush"
                                         Value="{StaticResource NoteCardFocusBorderBrush}"/>
-
-                                <Setter TargetName="DeskTab"
-                                        Property="BorderThickness"
-                                        Value="2"/>
                             </DataTrigger>
-                        </DataTemplate.Triggers>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
 
-        <!-- Nova nota fixada no Desk. -->
+                <ItemsControl x:Name="NoteTabs"
+                              ItemsSource="{Binding DeskNotes}"
+                              Focusable="False"
+                              IsHitTestVisible="False">
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="6"
+                                    Height="20"
+                                    Margin="0,2"
+                                    Background="{Binding Color}"
+                                    CornerRadius="3"
+                                    BorderBrush="{StaticResource DeskPillBorderBrush}"
+                                    BorderThickness="1"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+        </Grid>
+
+        <!-- Nova nota fixada no Desk, logo abaixo do baralho aberto. -->
         <Button x:Name="AddNoteButton"
-                Width="30"
-                Height="30"
-                Margin="0,0,3,8"
+                Width="26"
+                Height="26"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
+                VerticalAlignment="Top"
+                Visibility="Collapsed"
                 Background="{StaticResource DeskAddBackgroundBrush}"
                 BorderBrush="{StaticResource DeskAddBorderBrush}"
                 Cursor="Hand"
                 FocusVisualStyle="{x:Null}"
+                KeyboardNavigation.TabIndex="2"
                 Command="{Binding CreateNoteCommand}"
                 ToolTip="Nova nota no Desk"
                 AutomationProperties.Name="Criar nota no Desk"
@@ -310,6 +271,14 @@
             <Button.Template>
                 <ControlTemplate TargetType="Button">
                     <Grid>
+                        <Grid.Effect>
+                            <DropShadowEffect Color="{StaticResource ShadowColor}"
+                                              Direction="270"
+                                              BlurRadius="8"
+                                              ShadowDepth="1"
+                                              Opacity="0.18"/>
+                        </Grid.Effect>
+
                         <Ellipse x:Name="AddCircle"
                                  Fill="{TemplateBinding Background}"
                                  Stroke="{TemplateBinding BorderBrush}"
@@ -325,13 +294,22 @@
                                     Property="Fill"
                                     Value="{StaticResource DeskAddHoverBackgroundBrush}"/>
                         </Trigger>
+
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="AddCircle"
+                                    Property="Stroke"
+                                    Value="{StaticResource NoteCardFocusBorderBrush}"/>
+                            <Setter TargetName="AddCircle"
+                                    Property="StrokeThickness"
+                                    Value="2"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Button.Template>
 
             <TextBlock Text="+"
                        Margin="0,-2,0,0"
-                       FontSize="19"
+                       FontSize="17"
                        FontWeight="Medium"
                        Foreground="{StaticResource DeskAddGlyphBrush}"
                        IsHitTestVisible="False"/>
