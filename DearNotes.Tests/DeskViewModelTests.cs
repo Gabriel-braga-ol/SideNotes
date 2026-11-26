@@ -13,7 +13,9 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(repository);
+            using var viewModel = new DeskViewModel(
+                repository,
+                new RecordingDialogService());
 
             viewModel.OpenNote(note);
 
@@ -29,7 +31,9 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(repository);
+            using var viewModel = new DeskViewModel(
+                repository,
+                new RecordingDialogService());
 
             viewModel.OpenNote(note);
 
@@ -45,7 +49,9 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(repository);
+            using var viewModel = new DeskViewModel(
+                repository,
+                new RecordingDialogService());
 
             viewModel.OpenNote(note);
 
@@ -64,7 +70,9 @@ namespace DearNotes.Tests
         {
             var repository = new FakeNotesRepository();
 
-            using var viewModel = new DeskViewModel(repository);
+            using var viewModel = new DeskViewModel(
+                repository,
+                new RecordingDialogService());
 
             viewModel.SetExpanded(true);
 
@@ -79,11 +87,52 @@ namespace DearNotes.Tests
 
             repository.Notes.Add(note);
 
-            using var viewModel = new DeskViewModel(repository);
+            using var viewModel = new DeskViewModel(
+                repository,
+                new RecordingDialogService());
 
             viewModel.OpenNote(note);
             viewModel.CloseNote();
 
+            Assert.Null(viewModel.OpenedNote);
+        }
+
+        [Fact]
+        public void CreateNoteCommand_WhenDeskHasRoom_CreatesPinnedNoteAndOpensIt()
+        {
+            var repository = new FakeNotesRepository();
+
+            using var viewModel = new DeskViewModel(
+                repository,
+                new RecordingDialogService());
+
+            viewModel.CreateNoteCommand.Execute(null);
+
+            Note note = Assert.Single(repository.Notes);
+
+            Assert.True(note.IsPinnedToDesk);
+            Assert.Same(note, viewModel.OpenedNote);
+            Assert.True(viewModel.IsExpanded);
+            Assert.Equal(1, repository.SavePendingChangesCalls);
+        }
+
+        [Fact]
+        public void CreateNoteCommand_WhenDeskIsFull_ShowsInformationAndCreatesNothing()
+        {
+            var repository = new FakeNotesRepository();
+            var dialogs = new RecordingDialogService();
+
+            for (int i = 0; i < Note.MaxDeskPinnedNotes; i++)
+            {
+                repository.Notes.Add(CreateNote($"Fixada {i}", isPinned: true));
+            }
+
+            using var viewModel = new DeskViewModel(repository, dialogs);
+
+            viewModel.CreateNoteCommand.Execute(null);
+
+            Assert.Single(dialogs.Information);
+            Assert.Equal(Note.MaxDeskPinnedNotes, repository.Notes.Count);
             Assert.Null(viewModel.OpenedNote);
         }
 

@@ -10,25 +10,17 @@ namespace DearNotes.Views
 {
     /// <summary>
     /// Mantém o estado de posicionamento do Desk e aplica a geometria pura
-    /// de <see cref="DeskGeometry"/> à janela e às abas das notas.
+    /// de <see cref="DeskGeometry"/> à janela, ao baralho e ao leque.
     /// </summary>
     internal sealed class DeskLayoutService
     {
-        private const double CardSpacing = 58;
-
-        private const double CardHeight = 160;
-
-        private const double CardPadding = 12;
-
-        private const double MaxAngle = 2;
-
-        private const double MaxOffset = 4;
-
         private readonly Window window;
 
-        private readonly FrameworkElement pillHandle;
+        private readonly FrameworkElement deskHandle;
 
-        private readonly ItemsControl noteTabs;
+        private readonly ItemsControl fanCards;
+
+        private readonly FrameworkElement addNoteButton;
 
         private readonly IScreenService screenService;
 
@@ -44,15 +36,17 @@ namespace DearNotes.Views
 
         public DeskLayoutService(
             Window window,
-            FrameworkElement pillHandle,
-            ItemsControl noteTabs,
+            FrameworkElement deskHandle,
+            ItemsControl fanCards,
+            FrameworkElement addNoteButton,
             IScreenService screenService,
             IDeskPositionStore positionStore,
             double preferredHeight)
         {
             this.window = window;
-            this.pillHandle = pillHandle;
-            this.noteTabs = noteTabs;
+            this.deskHandle = deskHandle;
+            this.fanCards = fanCards;
+            this.addNoteButton = addNoteButton;
             this.screenService = screenService;
             this.positionStore = positionStore;
             this.preferredHeight = preferredHeight;
@@ -107,9 +101,8 @@ namespace DearNotes.Views
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
 
-            pillHandle.HorizontalAlignment = alignment;
-            noteTabs.HorizontalAlignment = alignment;
-            noteTabs.Margin = new Thickness(0);
+            deskHandle.HorizontalAlignment = alignment;
+            addNoteButton.HorizontalAlignment = alignment;
 
             PositionNoteCards(isOnRight);
         }
@@ -197,40 +190,44 @@ namespace DearNotes.Views
 
         public void PositionNoteCards(bool isOnRight)
         {
-            int count = noteTabs.Items.Count;
+            int count = fanCards.Items.Count;
 
-            noteTabs.Height =
-                Math.Max(0, count - 1) * CardSpacing
-                + CardHeight
-                + CardPadding * 2;
+            double availableHeight = Math.Max(
+                1,
+                preferredHeight - DeskGeometry.AddButtonReserve);
 
-            double direction = isOnRight ? -1 : 1;
+            double step = DeskGeometry.ComputeFanStep(
+                count,
+                DeskGeometry.FanCardHeight,
+                availableHeight,
+                DeskGeometry.FanStep);
+
+            double top = DeskGeometry.ComputeFanTop(
+                count,
+                DeskGeometry.FanCardHeight,
+                availableHeight,
+                DeskGeometry.FanStep);
+
+            double left = isOnRight
+                ? DeskGeometry.ExpandedWidth -
+                  DeskGeometry.FanCardWidth -
+                  DeskGeometry.FanEdgeMargin
+                : DeskGeometry.FanEdgeMargin;
 
             for (int i = 0; i < count; i++)
             {
                 var container =
-                    noteTabs.ItemContainerGenerator
+                    fanCards.ItemContainerGenerator
                         .ContainerFromIndex(i) as ContentPresenter;
 
                 if (container is null)
                     continue;
 
-                double progress = count <= 1
-                    ? 0.5
-                    : (double)i / (count - 1);
+                container.Width = DeskGeometry.FanCardWidth;
+                container.Height = DeskGeometry.FanCardHeight;
 
-                double angle = count <= 1
-                    ? 0
-                    : (progress * 2 - 1) * MaxAngle;
-
-                double offset = count <= 1
-                    ? 0
-                    : progress * MaxOffset;
-
-                container.Tag = angle * direction;
-
-                Canvas.SetLeft(container, 4 + offset * direction);
-                Canvas.SetTop(container, CardPadding + i * CardSpacing);
+                Canvas.SetLeft(container, left);
+                Canvas.SetTop(container, top + i * step);
             }
         }
 

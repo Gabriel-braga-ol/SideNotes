@@ -55,8 +55,9 @@ namespace DearNotes.Views
 
             layout = new DeskLayoutService(
                 this,
-                PillHandle,
-                NoteTabs,
+                TabDeck,
+                FanCards,
+                AddNoteButton,
                 screenService,
                 positionStore,
                 Height);
@@ -66,31 +67,30 @@ namespace DearNotes.Views
                 viewModel,
                 screenService,
                 layout,
-                PillHandle,
+                TabDeck,
                 StopCollapseTimer,
                 CollapseFan);
 
             fanAnimator = new DeskFanAnimator(
                 viewModel,
-                DeskRoot,
-                PillHandle,
-                NoteTabs,
+                TabDeck,
+                FanCards,
                 SetDeskWidth,
                 () => IsMouseOver,
                 IsDragActive);
 
             keyboardNavigator = new DeskKeyboardNavigator(
                 viewModel,
-                NoteTabs,
-                PillHandle,
+                FanCards,
+                TabDeck,
                 OpenNote);
 
-            PillHandle.MouseRightButtonDown +=
+            TabDeck.MouseRightButtonDown +=
                 dragController.HandleMouseRightButtonDown;
-            PillHandle.MouseRightButtonUp +=
+            TabDeck.MouseRightButtonUp +=
                 dragController.HandleMouseRightButtonUp;
-            PillHandle.MouseMove += dragController.HandleMouseMove;
-            PillHandle.LostMouseCapture +=
+            TabDeck.MouseMove += dragController.HandleMouseMove;
+            TabDeck.LostMouseCapture +=
                 dragController.HandleLostMouseCapture;
 
             MouseEnter += (_, _) => fanAnimator.HandleMouseEnter();
@@ -123,7 +123,7 @@ namespace DearNotes.Views
             layout.SnapToEdge(viewModel.IsOnRight, position.VerticalPosition);
         }
 
-        private void Pill_MouseLeftButtonDown(
+        private void DeskHandle_MouseLeftButtonDown(
             object sender,
             MouseButtonEventArgs e)
         {
@@ -131,7 +131,7 @@ namespace DearNotes.Views
 
             if (dragController.IsDragging) return;
 
-            PillHandle.Focus();
+            TabDeck.Focus();
             fanAnimator.StopCollapseTimer();
             viewModel.SetExpanded(true);
         }
@@ -170,9 +170,34 @@ namespace DearNotes.Views
             OpenNote(note);
         }
 
-        private void Pill_KeyDown(object sender, KeyEventArgs e)
+        private void DeskTab_MouseLeftButtonDown(
+            object sender,
+            MouseButtonEventArgs e)
         {
-            keyboardNavigator.HandlePillKeyDown(sender, e);
+            if (sender is not FrameworkElement element ||
+                element.DataContext is not Note note) return;
+
+            e.Handled = true;
+            fanAnimator.StopCollapseTimer();
+
+            OpenNote(note);
+        }
+
+        private void DeskTab_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter && e.Key != Key.Space) return;
+
+            if (sender is not FrameworkElement element ||
+                element.DataContext is not Note note) return;
+
+            e.Handled = true;
+
+            OpenNote(note);
+        }
+
+        private void DeskHandle_KeyDown(object sender, KeyEventArgs e)
+        {
+            keyboardNavigator.HandleDeskKeyDown(sender, e);
         }
 
         private void NoteTab_KeyDown(object sender, KeyEventArgs e)

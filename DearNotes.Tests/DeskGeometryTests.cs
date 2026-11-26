@@ -245,5 +245,82 @@ namespace DearNotes.Tests
             Assert.Equal(400, position.X);
             Assert.Equal(350, position.Y);
         }
+
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(1, 0)]
+        [InlineData(5, 70)]
+        public void ComputeFanStep_WithRoomForAllCards_UsesPreferredStep(
+            int count,
+            double expectedStep)
+        {
+            double step = DeskGeometry.ComputeFanStep(
+                count,
+                DeskGeometry.FanCardHeight,
+                availableHeight: 900,
+                preferredStep: DeskGeometry.FanStep);
+
+            Assert.Equal(expectedStep, step);
+        }
+
+        [Fact]
+        public void ComputeFanStep_WhenHeightIsTight_LimitsStepToFitCards()
+        {
+            double step = DeskGeometry.ComputeFanStep(
+                count: 5,
+                DeskGeometry.FanCardHeight,
+                availableHeight: 388,
+                preferredStep: DeskGeometry.FanStep);
+
+            Assert.Equal(50, step);
+        }
+
+        [Fact]
+        public void ComputeFanStep_WhenCardsDoNotFit_ReturnsZero()
+        {
+            double step = DeskGeometry.ComputeFanStep(
+                count: 5,
+                DeskGeometry.FanCardHeight,
+                availableHeight: 100,
+                preferredStep: DeskGeometry.FanStep);
+
+            Assert.Equal(0, step);
+        }
+
+        [Fact]
+        public void ComputeFanTop_CentersStackInAvailableHeight()
+        {
+            double top = DeskGeometry.ComputeFanTop(
+                count: 3,
+                DeskGeometry.FanCardHeight,
+                availableHeight: 900,
+                preferredStep: DeskGeometry.FanStep);
+
+            Assert.Equal(286, top);
+        }
+
+        [Fact]
+        public void ComputeFanTop_WhenStackFillsHeight_StaysAtTop()
+        {
+            double top = DeskGeometry.ComputeFanTop(
+                count: 5,
+                DeskGeometry.FanCardHeight,
+                availableHeight: 300,
+                preferredStep: DeskGeometry.FanStep);
+
+            Assert.Equal(0, top);
+        }
+
+        [Fact]
+        public void ComputeFanTop_WithoutCards_ReturnsZero()
+        {
+            double top = DeskGeometry.ComputeFanTop(
+                count: 0,
+                DeskGeometry.FanCardHeight,
+                availableHeight: 900,
+                preferredStep: DeskGeometry.FanStep);
+
+            Assert.Equal(0, top);
+        }
     }
 }

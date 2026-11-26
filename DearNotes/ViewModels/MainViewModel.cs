@@ -13,8 +13,6 @@ namespace DearNotes.ViewModels
 {
     public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
-        private const int MaxDeskPinnedNotes = 5;
-
         private readonly INotesRepository repository;
 
         private readonly IDialogService dialogService;
@@ -202,11 +200,11 @@ namespace DearNotes.ViewModels
             if (SelectedNote is null) return;
 
             if (!SelectedNote.IsPinnedToDesk &&
-                PinnedNotesCount >= MaxDeskPinnedNotes)
+                PinnedNotesCount >= Note.MaxDeskPinnedNotes)
             {
                 dialogService.ShowInformation(
                     $"Você pode fixar no máximo " +
-                    $"{MaxDeskPinnedNotes} notas no Desk.",
+                    $"{Note.MaxDeskPinnedNotes} notas no Desk.",
                     "DearNotes");
 
                 return;

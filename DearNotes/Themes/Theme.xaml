@@ -31,12 +31,13 @@
     <SolidColorBrush x:Key="PinIconBrush" Color="#7D828A"/>
     <SolidColorBrush x:Key="PinIconActiveBrush" Color="#626870"/>
 
-    <!-- Pílula e cartões do Desk. -->
-    <SolidColorBrush x:Key="DeskPillBackgroundBrush" Color="#B3272B30"/>
-    <SolidColorBrush x:Key="DeskPillHoverBackgroundBrush" Color="#E033383F"/>
-    <SolidColorBrush x:Key="DeskPillBorderBrush" Color="#40FFFFFF"/>
-    <SolidColorBrush x:Key="DeskPillHoverBorderBrush" Color="#70FFFFFF"/>
-    <SolidColorBrush x:Key="DeskPillFocusBorderBrush" Color="#FFFFFFFF"/>
+    <!-- Abas e cartões do Desk. -->
+    <SolidColorBrush x:Key="DeskTabBorderBrush" Color="#24000000"/>
+    <SolidColorBrush x:Key="DeskTabHoverBorderBrush" Color="#52000000"/>
+    <SolidColorBrush x:Key="DeskAddBackgroundBrush" Color="#D92B3036"/>
+    <SolidColorBrush x:Key="DeskAddHoverBackgroundBrush" Color="#F23A4047"/>
+    <SolidColorBrush x:Key="DeskAddBorderBrush" Color="#3DFFFFFF"/>
+    <SolidColorBrush x:Key="DeskAddGlyphBrush" Color="#F5FFFFFF"/>
 
     <!-- Janela principal: superfície creme, cartões claros e textos quentes. -->
     <SolidColorBrush x:Key="AppBackdropBrush" Color="#F4EDE1"/>
