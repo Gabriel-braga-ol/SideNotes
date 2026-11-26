@@ -8,7 +8,7 @@ using DearNotes.ViewModels;
 namespace DearNotes.Views
 {
     /// <summary>
-    /// Conduz o arraste da pílula com o botão direito, incluindo a captura
+    /// Conduz o arraste do baralho com o botão direito, incluindo a captura
     /// do mouse, a troca de monitor e a recuperação de falhas do Win32.
     /// </summary>
     internal sealed class DeskDragController
@@ -21,7 +21,7 @@ namespace DearNotes.Views
 
         private readonly DeskLayoutService layout;
 
-        private readonly FrameworkElement pillHandle;
+        private readonly FrameworkElement deskHandle;
 
         private readonly Action stopCollapseTimer;
 
@@ -34,7 +34,7 @@ namespace DearNotes.Views
             DeskViewModel viewModel,
             IScreenService screenService,
             DeskLayoutService layout,
-            FrameworkElement pillHandle,
+            FrameworkElement deskHandle,
             Action stopCollapseTimer,
             Action collapseFan)
         {
@@ -42,7 +42,7 @@ namespace DearNotes.Views
             this.viewModel = viewModel;
             this.screenService = screenService;
             this.layout = layout;
-            this.pillHandle = pillHandle;
+            this.deskHandle = deskHandle;
             this.stopCollapseTimer = stopCollapseTimer;
             this.collapseFan = collapseFan;
         }
@@ -70,7 +70,7 @@ namespace DearNotes.Views
                 return;
             }
 
-            if (!pillHandle.CaptureMouse())
+            if (!deskHandle.CaptureMouse())
             {
                 IsDragging = false;
             }
@@ -111,7 +111,7 @@ namespace DearNotes.Views
             object sender,
             MouseEventArgs e)
         {
-            if (IsDragging && !pillHandle.IsMouseCaptured) FinishDrag();
+            if (IsDragging && !deskHandle.IsMouseCaptured) FinishDrag();
         }
 
         public bool MoveWithMouse()
@@ -148,7 +148,7 @@ namespace DearNotes.Views
         {
             IsDragging = false;
 
-            if (pillHandle.IsMouseCaptured) pillHandle.ReleaseMouseCapture();
+            if (deskHandle.IsMouseCaptured) deskHandle.ReleaseMouseCapture();
         }
 
         private void FinishDrag()
@@ -157,7 +157,7 @@ namespace DearNotes.Views
 
             IsDragging = false;
 
-            if (pillHandle.IsMouseCaptured) pillHandle.ReleaseMouseCapture();
+            if (deskHandle.IsMouseCaptured) deskHandle.ReleaseMouseCapture();
 
             if (!TryGetMousePosition(out Point mouse)) return;
 

@@ -71,7 +71,9 @@ namespace DearNotes
                     action => PostToDispatcher(dispatcher, action));
 
                 viewModel = new MainViewModel(notesRepository, dialogService);
-                deskViewModel = new DeskViewModel(notesRepository);
+                deskViewModel = new DeskViewModel(
+                    notesRepository,
+                    dialogService);
             }
             catch (Exception ex) when (
                 ex is IOException ||

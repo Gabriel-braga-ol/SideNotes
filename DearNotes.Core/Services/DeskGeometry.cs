@@ -5,11 +5,21 @@ namespace DearNotes.Services
 {
     public static class DeskGeometry
     {
-        public const double CollapsedWidth = 24;
+        public const double CollapsedWidth = 36;
 
-        public const double ExpandedWidth = 256;
+        public const double ExpandedWidth = 400;
 
         public const double ScreenMargin = 8;
+
+        public const double FanCardWidth = 340;
+
+        public const double FanCardHeight = 188;
+
+        public const double FanStep = 70;
+
+        public const double FanEdgeMargin = 10;
+
+        public const double AddButtonReserve = 64;
 
         public static Rect ComputeSnapBounds(
             Rect workArea,
@@ -71,6 +81,40 @@ namespace DearNotes.Services
                 Math.Max(workArea.Left, workArea.Right - widthPixels));
 
             return new Rect(left, top, widthPixels, heightPixels);
+        }
+
+        public static double ComputeFanStep(
+            int count,
+            double cardHeight,
+            double availableHeight,
+            double preferredStep)
+        {
+            if (count < 2) return 0;
+
+            double maxStep = Math.Max(
+                0,
+                (availableHeight - cardHeight) / (count - 1));
+
+            return Math.Clamp(preferredStep, 0, maxStep);
+        }
+
+        public static double ComputeFanTop(
+            int count,
+            double cardHeight,
+            double availableHeight,
+            double preferredStep)
+        {
+            if (count <= 0) return 0;
+
+            double step = ComputeFanStep(
+                count,
+                cardHeight,
+                availableHeight,
+                preferredStep);
+
+            double stackHeight = cardHeight + (count - 1) * step;
+
+            return Math.Max(0, (availableHeight - stackHeight) / 2);
         }
 
         public static double ComputeNormalizedTop(

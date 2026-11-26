@@ -10,7 +10,7 @@ namespace DearNotes.Views
 {
     /// <summary>
     /// Navegação por teclado do Desk: abertura e recolhimento do leque,
-    /// abertura de notas, foco entre as abas e retorno à pílula.
+    /// abertura de notas, foco entre as cartas e retorno ao baralho.
     /// </summary>
     internal sealed class DeskKeyboardNavigator
     {
@@ -18,25 +18,25 @@ namespace DearNotes.Views
 
         private readonly DeskViewModel viewModel;
 
-        private readonly ItemsControl noteTabs;
+        private readonly ItemsControl fanCards;
 
-        private readonly FrameworkElement pillHandle;
+        private readonly FrameworkElement deskHandle;
 
         private readonly Action<Note> openNote;
 
         public DeskKeyboardNavigator(
             DeskViewModel viewModel,
-            ItemsControl noteTabs,
-            FrameworkElement pillHandle,
+            ItemsControl fanCards,
+            FrameworkElement deskHandle,
             Action<Note> openNote)
         {
             this.viewModel = viewModel;
-            this.noteTabs = noteTabs;
-            this.pillHandle = pillHandle;
+            this.fanCards = fanCards;
+            this.deskHandle = deskHandle;
             this.openNote = openNote;
         }
 
-        public void HandlePillKeyDown(
+        public void HandleDeskKeyDown(
             object sender,
             KeyEventArgs e)
         {
@@ -72,7 +72,7 @@ namespace DearNotes.Views
 
                 case Key.Escape:
                     e.Handled = true;
-                    CollapseAndFocusPill();
+                    CollapseAndFocusDesk();
                     break;
 
                 case Key.Left:
@@ -101,19 +101,19 @@ namespace DearNotes.Views
             FocusNoteDelayed(0);
         }
 
-        private void CollapseAndFocusPill()
+        private void CollapseAndFocusDesk()
         {
             viewModel.SetExpanded(false);
-            pillHandle.Focus();
+            deskHandle.Focus();
         }
 
         private void MoveFocus(Note note, int delta)
         {
-            int count = noteTabs.Items.Count;
+            int count = fanCards.Items.Count;
 
             if (count == 0) return;
 
-            int index = noteTabs.Items.IndexOf(note);
+            int index = fanCards.Items.IndexOf(note);
 
             if (index < 0) return;
 
@@ -124,16 +124,16 @@ namespace DearNotes.Views
 
         private void FocusNoteDelayed(int index)
         {
-            noteTabs.Dispatcher.BeginInvoke(
+            fanCards.Dispatcher.BeginInvoke(
                 DispatcherPriority.Loaded,
                 new Action(() => FocusNote(index)));
         }
 
         private void FocusNote(int index)
         {
-            if (index < 0 || index >= noteTabs.Items.Count) return;
+            if (index < 0 || index >= fanCards.Items.Count) return;
 
-            if (noteTabs.ItemContainerGenerator
+            if (fanCards.ItemContainerGenerator
                     .ContainerFromIndex(index) is not ContentPresenter container)
             {
                 return;

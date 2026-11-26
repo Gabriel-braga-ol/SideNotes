@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows.Data;
 using System.Windows.Input;
 using DearNotes.Models;
@@ -12,6 +13,8 @@ namespace DearNotes.ViewModels
     public sealed class DeskViewModel : INotifyPropertyChanged, IDisposable
     {
         private readonly INotesRepository repository;
+
+        private readonly IDialogService dialogService;
 
         private Note? openedNote;
         private bool isExpanded;
@@ -27,11 +30,16 @@ namespace DearNotes.ViewModels
 
         public ICommand CloseOpenedNoteCommand { get; }
 
+        public ICommand CreateNoteCommand { get; }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public DeskViewModel(INotesRepository repository)
+        public DeskViewModel(
+            INotesRepository repository,
+            IDialogService dialogService)
         {
             this.repository = repository;
+            this.dialogService = dialogService;
 
             DeskNotes = new ListCollectionView(Notes)
             {
@@ -39,6 +47,7 @@ namespace DearNotes.ViewModels
             };
 
             CloseOpenedNoteCommand = new RelayCommand(CloseNote);
+            CreateNoteCommand = new RelayCommand(CreateNote);
 
             repository.NoteChanged += OnNoteChanged;
             Notes.CollectionChanged += OnNotesCollectionChanged;
@@ -67,6 +76,27 @@ namespace DearNotes.ViewModels
 
             isOnRight = onRight;
             Notify(nameof(IsOnRight));
+        }
+
+        private void CreateNote()
+        {
+            if (DeskNotes.Cast<Note>().Count() >= Note.MaxDeskPinnedNotes)
+            {
+                dialogService.ShowInformation(
+                    $"Você pode fixar no máximo " +
+                    $"{Note.MaxDeskPinnedNotes} notas no Desk.",
+                    "DearNotes");
+
+                return;
+            }
+
+            Note note = repository.CreateNote();
+
+            note.IsPinnedToDesk = true;
+
+            repository.SavePendingChanges();
+
+            UpdateState(note, expanded: true);
         }
 
         private void UpdateState(Note? note, bool expanded)

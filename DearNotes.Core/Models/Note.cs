@@ -5,6 +5,8 @@ namespace DearNotes.Models
 {
     public class Note : INotifyPropertyChanged
     {
+        public const int MaxDeskPinnedNotes = 5;
+
         private string title = string.Empty;
         private string content = string.Empty;
         private string color = "#B8E6D0";

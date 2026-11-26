@@ -47,16 +47,16 @@ DearNotes/
   AssemblyInfo.cs
   ViewModels/
     MainViewModel.cs        # Seleção, busca, filtro do Desk e ações da janela principal
-    DeskViewModel.cs        # Notas fixadas, leque e estado do Desk
+    DeskViewModel.cs        # Notas fixadas, criação, leque e estado do Desk
     RelayCommand.cs         # ICommand usada pelas ações dos ViewModels
   Themes/
     Theme.xaml              # Paleta de brushes compartilhada, carregada em App.xaml
   Views/
     MainWindow.xaml(.cs)    # Moldura, lista, busca, filtros e editor da janela principal
-    DeskWindow.xaml(.cs)    # Pílula lateral, eventos e ciclo de vida da janela
-    DeskLayoutService.cs    # Estado de posicionamento e disposição do Desk
-    DeskDragController.cs   # Arraste da pílula, captura do mouse e monitores
-    DeskFanAnimator.cs      # Leque, animações, largura e atraso de recolhimento
+    DeskWindow.xaml(.cs)    # Baralho lateral, cartas do leque e ciclo de vida
+    DeskLayoutService.cs    # Posicionamento, baralho e disposição do leque
+    DeskDragController.cs   # Arraste do baralho, captura do mouse e monitores
+    DeskFanAnimator.cs      # Leque, escalonamento das cartas e recolhimento
     DeskKeyboardNavigator.cs # Foco, atalhos e navegação por teclado do Desk
     NoteEditorWindow.xaml(.cs) # Editor aberto a partir do Desk
     Converters/
@@ -75,7 +75,7 @@ DearNotes/
     AppLogger.cs            # Registro de falhas inesperadas em arquivo
 DearNotes.Core/
   Models/
-    Note.cs                 # Dados da nota + INotifyPropertyChanged + metadados
+    Note.cs                 # Dados da nota, limite do Desk e notificações
     NoteDocument.cs         # Representação persistida de uma nota
     NotesDocument.cs        # Documento versionado de notes.json
     DeskPosition.cs         # Monitor, lado e posição vertical do Desk
@@ -102,7 +102,7 @@ DearNotes.Tests/
   NotesAutoSaverTests.cs    # Testes da fila de autosave
   NoteTests.cs              # Identidade, metadados e cópia para o autosave
   MainViewModelTests.cs     # Busca, filtros, fixação, exclusão, fechamento e avisos
-  DeskViewModelTests.cs     # Notas fixadas, abertura e estado do leque
+  DeskViewModelTests.cs     # Notas fixadas, criação, abertura e estado do leque
   FakeNotesRepository.cs    # Repositório falso para os testes de ViewModel
   RecordingDialogService.cs # Diálogos falsos para os testes de ViewModel
 ```
@@ -130,11 +130,12 @@ Limites conhecidos: no máximo **5 notas fixadas** no Desk, **5 cópias inválid
 - **Criptografia em repouso:** `notes.json` é sempre gravado como envelope cifrado por `AesGcmNoteEncryption`, com chave fornecida por `IKeyProvider` e protegida pelo DPAPI. Não grave notas em texto puro no disco, não registre chaves, nonces ou conteúdo em log e não desative a validação da tag para "recuperar" um arquivo. A chave (`notes.key`) deve ser copiada junto de qualquer backup manual; sem ela, as notas cifradas são irrecuperáveis.
 - **Envelope versionado:** mudanças no envelope exigem incremento de `ProtectedNotesFile.CurrentFormatVersion`, migração dos arquivos existentes (incluindo os cifrados), testes com o formato anterior e atualização do README. O `SchemaVersion` interno continua versionando o documento de notas.
 - **`Note` é compartilhada por referência:** os objetos são os mesmos entre MainWindow e Desk. Não clone notas para editar; alterações disparam `PropertyChanged` e o autosave.
-- **Geometria testável:** cálculos de encaixe, lado, posição normalizada e centralização do editor ficam em `DeskGeometry`, sem depender de janelas. Não duplique essa matemática no code-behind.
-- **Layout do Desk:** o estado de posicionamento (monitor atual, lado, largura e posição vertical), o encaixe e a disposição dos cards ficam em `DeskLayoutService`. O code-behind da janela apenas encaminha eventos para esse serviço.
-- **Arraste do Desk:** `DeskDragController` conduz a captura do mouse, o deslocamento da pílula e a troca de monitor. A janela apenas conecta os eventos e mantém o estado visual.
-- **Animação do Desk:** `DeskFanAnimator` concentra a abertura e o recolhimento do leque, as animações das abas, a largura da janela e o atraso de recolhimento. A janela não deve duplicar esses estados nem animar as abas diretamente.
-- **Acessibilidade do Desk:** `DeskKeyboardNavigator` concentra os atalhos e a navegação por teclado. A pílula e as abas devem ser focáveis, responder a Enter/Espaço e Escape, percorrer as notas com as setas e mostrar o foco atual; `AutomationProperties` descrevem as ações para leitores de tela.
+- **Geometria testável:** cálculos de encaixe, lado, posição normalizada, disposição do leque e centralização do editor ficam em `DeskGeometry`, sem depender de janelas. Não duplique essa matemática no code-behind.
+- **Layout do Desk:** o estado de posicionamento (monitor atual, lado, largura e posição vertical), o encaixe, o passo e a altura disponível das cartas do leque ficam em `DeskLayoutService`. O code-behind da janela apenas encaminha eventos para esse serviço.
+- **Arraste do Desk:** `DeskDragController` conduz a captura do mouse, o deslocamento do baralho e a troca de monitor. A janela apenas conecta os eventos e mantém o estado visual.
+- **Animação do Desk:** `DeskFanAnimator` concentra a abertura e o recolhimento do leque, o escalonamento e as transições das cartas e do baralho, a largura da janela e o atraso de recolhimento. A janela não deve duplicar esses estados nem animar as cartas diretamente.
+- **Acessibilidade do Desk:** `DeskKeyboardNavigator` concentra os atalhos e a navegação por teclado. O baralho e as cartas do leque devem ser focáveis, responder a Enter/Espaço e Escape, percorrer as notas com Tab e as setas e mostrar o foco atual; `AutomationProperties` descrevem as ações para leitores de tela.
+- **Criação pelo Desk:** o botão **+** do Desk usa `CreateNoteCommand` do `DeskViewModel`, que cria a nota já fixada, respeita `Note.MaxDeskPinnedNotes`, avisa pelo `IDialogService` quando o limite é atingido e abre o editor. A View apenas faz o binding do comando.
 - **Win32 isolado:** chamadas nativas ficam em `DeskScreenService`, atrás de `IScreenService`, e em `WindowFrameService`, que ajusta a moldura personalizada da janela principal. Code-behind não deve importar `user32.dll` diretamente. Verifique o retorno das APIs, valide identificadores de janela e use `TryMoveWindow`/`TrySetWindowBounds` para posicionamento; falhas esperadas são registradas em log de depuração e não devem derrubar o aplicativo. Callbacks nativos não podem lançar exceções.
 - **Moldura da janela principal:** a barra nativa é substituída por `WindowChrome` no XAML; o arraste, a maximização e o menu do sistema continuam funcionando. `WindowFrameService` aplica os cantos arredondados do DWM quando disponíveis e limita a janela maximizada à área útil do monitor em `WM_GETMINMAXINFO`, para não cobrir a barra de tarefas. Em versões anteriores do Windows, a falha do DWM degrada para cantos retos sem encerrar o aplicativo. Os botões minimizar, maximizar e fechar são comportamento visual da View; as demais ações continuam em `ICommand`.
 - **Formatação na View:** conversores de apresentação (tempo relativo, data curta, prévia de uma linha e estado dos chips) ficam em `Views/Converters`, sem regra de negócio e sem acessar arquivos. Textos gerados para a interface seguem o português.
