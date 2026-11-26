@@ -19,7 +19,6 @@
     <SolidColorBrush x:Key="NoteTabDividerBrush" Color="#30222826"/>
     <SolidColorBrush x:Key="NotePreviewTextBrush" Color="#C7242A28"/>
     <SolidColorBrush x:Key="NoteCardBorderBrush" Color="#20000000"/>
-    <SolidColorBrush x:Key="NoteCardActiveBorderBrush" Color="#30000000"/>
     <SolidColorBrush x:Key="NoteCardFocusBorderBrush" Color="#31544B"/>
     <SolidColorBrush x:Key="EditorHeaderTextBrush" Color="#80242A28"/>
     <SolidColorBrush x:Key="EditorOutlineBrush" Color="#24000000"/>

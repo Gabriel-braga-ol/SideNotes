@@ -65,10 +65,8 @@
                             FocusVisualStyle="{x:Null}"
                             KeyDown="NoteCard_KeyDown"
                             MouseLeftButtonDown="NoteCard_MouseLeftButtonDown"
-                            MouseEnter="NoteCard_SlideStateChanged"
-                            MouseLeave="NoteCard_SlideStateChanged"
-                            GotKeyboardFocus="NoteCard_SlideStateChanged"
-                            LostKeyboardFocus="NoteCard_SlideStateChanged"
+                            GotKeyboardFocus="NoteCard_KeyboardFocusChanged"
+                            LostKeyboardFocus="NoteCard_KeyboardFocusChanged"
                             AutomationProperties.Name="{Binding Title}"
                             AutomationProperties.HelpText="Pressione Enter para abrir a nota e Escape para recolher o Desk.">
 
@@ -164,26 +162,6 @@
                             <Setter TargetName="NoteTabDivider"
                                     Property="HorizontalAlignment"
                                     Value="Left"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding IsMouseOver,
-                                                     ElementName=NoteCard}"
-                                     Value="True">
-
-                            <Setter TargetName="NoteCard"
-                                    Property="BorderBrush"
-                                    Value="{StaticResource NoteCardActiveBorderBrush}"/>
-
-                            <Setter TargetName="NoteCard"
-                                    Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect Color="{StaticResource ShadowColor}"
-                                                      Direction="270"
-                                                      BlurRadius="24"
-                                                      ShadowDepth="6"
-                                                      Opacity="0.26"/>
-                                </Setter.Value>
-                            </Setter>
                         </DataTrigger>
 
                         <DataTrigger Binding="{Binding IsKeyboardFocused,

@@ -170,6 +170,79 @@ namespace DearNotes.Services
             return FanTabPeek - FanTabWidth / 2;
         }
 
+        /// <summary>
+        /// Escolhe a carta a partir de uma posição fixa do ponteiro, e não da
+        /// carta sob ele: as cartas se movem e trocariam de dono a cada quadro.
+        /// Na coluna das abas, cada carta responde pela própria faixa; fora
+        /// dela, a carta já aberta continua escolhida enquanto contém o ponteiro.
+        /// </summary>
+        /// <returns>O índice da carta escolhida ou -1.</returns>
+        public static int ComputeChosenCardIndex(
+            Point pointerPosition,
+            int count,
+            double availableHeight,
+            bool isOnRight,
+            double panelWidth,
+            int currentIndex)
+        {
+            if (count <= 0) return -1;
+
+            double step = ComputeFanStep(
+                count,
+                FanCardHeight,
+                availableHeight,
+                FanStep);
+
+            double top = ComputeFanTop(
+                count,
+                FanCardHeight,
+                availableHeight,
+                FanStep);
+
+            if (IsInTabColumn(pointerPosition.X, isOnRight, panelWidth))
+            {
+                return ComputeTabBandIndex(pointerPosition.Y, count, top, step);
+            }
+
+            if (currentIndex < 0 || currentIndex >= count) return -1;
+
+            var revealedCard = new Rect(
+                ComputeFanCardLeft(isOnRight, panelWidth) +
+                    ComputeFanSlideOffset(isOnRight),
+                top + currentIndex * step,
+                FanCardWidth,
+                FanCardHeight);
+
+            return revealedCard.Contains(pointerPosition) ? currentIndex : -1;
+        }
+
+        private static bool IsInTabColumn(
+            double x,
+            bool isOnRight,
+            double panelWidth)
+        {
+            return isOnRight
+                ? x >= panelWidth - FanTabPeek && x <= panelWidth
+                : x >= 0 && x <= FanTabPeek;
+        }
+
+        private static int ComputeTabBandIndex(
+            double y,
+            int count,
+            double top,
+            double step)
+        {
+            double offset = y - top;
+            double stackHeight = FanCardHeight + (count - 1) * step;
+
+            if (offset < 0 || offset >= stackHeight) return -1;
+
+            // Sem passo, as cartas se empilham e só a última aparece.
+            if (step <= 0) return count - 1;
+
+            return Math.Min(count - 1, (int)(offset / step));
+        }
+
         public static double ComputeAddButtonTop(
             int count,
             double cardHeight,

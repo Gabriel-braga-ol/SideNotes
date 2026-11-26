@@ -357,6 +357,100 @@ namespace DearNotes.Tests
             Assert.True(revealedRight <= DeskGeometry.ExpandedWidth);
         }
 
+        // Com 5 cartas e 568 de altura: topo 20, passo 88, abas em x 280–320.
+        [Theory]
+        [InlineData(300, 30, 0)]
+        [InlineData(300, 120, 1)]
+        [InlineData(300, 380, 4)]
+        [InlineData(300, 540, 4)]
+        [InlineData(300, 10, -1)]
+        [InlineData(300, 560, -1)]
+        public void ComputeChosenCardIndex_InTabColumn_UsesTabBand(
+            double x,
+            double y,
+            int expectedIndex)
+        {
+            int index = DeskGeometry.ComputeChosenCardIndex(
+                new Point(x, y),
+                count: 5,
+                availableHeight: 568,
+                isOnRight: true,
+                DeskGeometry.ExpandedWidth,
+                currentIndex: -1);
+
+            Assert.Equal(expectedIndex, index);
+        }
+
+        [Fact]
+        public void ComputeChosenCardIndex_InTabColumnBelowOpenCard_ChoosesNextCard()
+        {
+            int index = DeskGeometry.ComputeChosenCardIndex(
+                new Point(300, 150),
+                count: 5,
+                availableHeight: 568,
+                isOnRight: true,
+                DeskGeometry.ExpandedWidth,
+                currentIndex: 0);
+
+            Assert.Equal(1, index);
+        }
+
+        [Fact]
+        public void ComputeChosenCardIndex_OverOpenCardBody_KeepsCurrentCard()
+        {
+            int index = DeskGeometry.ComputeChosenCardIndex(
+                new Point(100, 150),
+                count: 5,
+                availableHeight: 568,
+                isOnRight: true,
+                DeskGeometry.ExpandedWidth,
+                currentIndex: 0);
+
+            Assert.Equal(0, index);
+        }
+
+        [Fact]
+        public void ComputeChosenCardIndex_OutsideOpenCard_ChoosesNothing()
+        {
+            int index = DeskGeometry.ComputeChosenCardIndex(
+                new Point(100, 300),
+                count: 5,
+                availableHeight: 568,
+                isOnRight: true,
+                DeskGeometry.ExpandedWidth,
+                currentIndex: 0);
+
+            Assert.Equal(-1, index);
+        }
+
+        [Fact]
+        public void ComputeChosenCardIndex_LeftSide_UsesMirroredTabColumn()
+        {
+            int index = DeskGeometry.ComputeChosenCardIndex(
+                new Point(20, 120),
+                count: 5,
+                availableHeight: 568,
+                isOnRight: false,
+                DeskGeometry.ExpandedWidth,
+                currentIndex: -1);
+
+            Assert.Equal(1, index);
+        }
+
+        [Fact]
+        public void ComputeChosenCardIndex_WithoutCards_ChoosesNothing()
+        {
+            int index = DeskGeometry.ComputeChosenCardIndex(
+                new Point(300, 120),
+                count: 0,
+                availableHeight: 568,
+                isOnRight: true,
+                DeskGeometry.ExpandedWidth,
+                currentIndex: -1);
+
+            Assert.Equal(-1, index);
+        }
+
         [Fact]
         public void ComputeTabCenterInset_CentersOnVisibleTab()
         {

@@ -67,7 +67,7 @@ namespace DearNotes.Views
                 viewModel,
                 screenService,
                 layout,
-                TabDeck,
+                DeskRoot,
                 StopCollapseTimer,
                 CollapseFan);
 
@@ -78,7 +78,8 @@ namespace DearNotes.Views
                 AddNoteButton,
                 SetDeskWidth,
                 IsPointerInsideDesk,
-                IsDragActive);
+                IsDragActive,
+                FindChosenCardIndex);
 
             keyboardNavigator = new DeskKeyboardNavigator(
                 viewModel,
@@ -86,13 +87,18 @@ namespace DearNotes.Views
                 TabDeck,
                 OpenNote);
 
-            TabDeck.MouseRightButtonDown +=
+            // O arraste vale para o Desk inteiro: com o ponteiro perto, a faixa
+            // de pílulas já deu lugar ao leque antes do clique do botão direito.
+            DeskRoot.MouseRightButtonDown +=
                 dragController.HandleMouseRightButtonDown;
-            TabDeck.MouseRightButtonUp +=
+            DeskRoot.MouseRightButtonUp +=
                 dragController.HandleMouseRightButtonUp;
-            TabDeck.MouseMove += dragController.HandleMouseMove;
-            TabDeck.LostMouseCapture +=
+            DeskRoot.MouseMove += dragController.HandleMouseMove;
+            DeskRoot.LostMouseCapture +=
                 dragController.HandleLostMouseCapture;
+
+            DeskRoot.MouseMove += (_, e) =>
+                fanAnimator.HandlePointerMove(e.GetPosition(FanCards));
 
             MouseEnter += (_, _) => fanAnimator.HandleMouseEnter();
             MouseLeave += (_, _) => fanAnimator.HandleMouseLeave();
@@ -164,8 +170,14 @@ namespace DearNotes.Views
             object sender,
             MouseButtonEventArgs e)
         {
-            if (sender is not FrameworkElement element ||
-                element.DataContext is not Note note) return;
+            if (sender is not FrameworkElement element) return;
+
+            // Uma carta que volta ao baralho ainda pode estar sob o ponteiro;
+            // vale a nota que está fora dele.
+            if ((fanAnimator.ChosenItem ?? element.DataContext) is not Note note)
+            {
+                return;
+            }
 
             e.Handled = true;
             fanAnimator.StopCollapseTimer();
@@ -173,12 +185,22 @@ namespace DearNotes.Views
             OpenNote(note);
         }
 
-        private void NoteCard_SlideStateChanged(object sender, RoutedEventArgs e)
+        private void NoteCard_KeyboardFocusChanged(
+            object sender,
+            KeyboardFocusChangedEventArgs e)
         {
             if (sender is FrameworkElement card)
             {
-                fanAnimator.UpdateCardSlide(card);
+                fanAnimator.HandleCardFocusChanged(card);
             }
+        }
+
+        private int FindChosenCardIndex(Point pointerPosition, int currentIndex)
+        {
+            return layout.FindChosenCardIndex(
+                pointerPosition,
+                viewModel.IsOnRight,
+                currentIndex);
         }
 
         private void DeskHandle_KeyDown(object sender, KeyEventArgs e)

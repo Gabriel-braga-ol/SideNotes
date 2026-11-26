@@ -237,6 +237,20 @@ namespace DearNotes.Views
             }
         }
 
+        public int FindChosenCardIndex(
+            Point pointerPosition,
+            bool isOnRight,
+            int currentIndex)
+        {
+            return DeskGeometry.ComputeChosenCardIndex(
+                pointerPosition,
+                fanCards.Items.Count,
+                GetFanAvailableHeight(),
+                isOnRight,
+                DeskGeometry.ExpandedWidth,
+                currentIndex);
+        }
+
         private void PositionAddButton(int count, bool isOnRight)
         {
             double top = DeskGeometry.ComputeAddButtonTop(

@@ -31,7 +31,7 @@ O projeto faz parte do meu aprendizado em C#/.NET, com foco em interfaces deskto
 - Criação de nota direto do Desk: o botão **+** cria a nota já fixada e abre o editor, respeitando o limite de cinco notas.
 - Editor do Desk em janela própria, com salvamento automático independente da seleção na janela principal.
 - Janela do editor aberta no mesmo monitor do Desk, arrastável pela barra superior e fechada junto com o Desk.
-- Arraste do baralho com o botão direito entre monitores, encaixe nas laterais e restauração do monitor e da posição ao iniciar.
+- Arraste do Desk com o botão direito, a partir de qualquer parte dele, entre monitores, encaixe nas laterais e restauração do monitor e da posição ao iniciar.
 - Recuperação do Desk no monitor principal quando a tela utilizada é desconectada.
 - Adaptação do tamanho e do posicionamento do Desk entre monitores com escalas de DPI diferentes.
 - Navegação do Desk por teclado, com foco visível, abertura e recolhimento do leque e troca de notas.
@@ -106,10 +106,10 @@ Criar uma nota limpa a busca e o filtro **No Desk** para que a nova anotação f
 
 1. Selecione uma nota na janela principal e use a ação de fixar no Desk, ou use o botão **+** do Desk para criar uma nota já fixada e abrir o editor. É possível manter até cinco notas fixadas.
 2. Recolhido, o Desk é uma faixa fina encostada na borda da tela, com uma pílula na cor de cada nota fixada. Aproxime o ponteiro dela para abrir o leque: as notas entram como telhas sobrepostas, de cima para baixo, uma 45 ms depois da outra, mostrando apenas a aba vertical com o nome. O botão **+** aparece logo abaixo da última carta. Clicar na faixa também abre o leque. Sem notas fixadas, a faixa dá lugar ao botão **+**.
-3. Passe o mouse sobre uma aba para escolher a nota: a carta desliza para fora do baralho em tamanho completo, com título e texto, e volta ao lugar quando o ponteiro sai. Clique nela para abrir a janela do editor, que entra deslizando a partir do lado do Desk. Clicar na carta da nota já aberta traz o editor de volta à frente.
+3. Passe o mouse sobre uma aba para escolher a nota: a carta desliza para fora do baralho em tamanho completo, com título e texto. Ela continua aberta enquanto o ponteiro estiver sobre ela; subir ou descer pela coluna de abas troca a carta escolhida, e sair do Desk a devolve ao lugar. Clique nela para abrir a janela do editor, que entra deslizando a partir do lado do Desk. Clicar na carta da nota já aberta traz o editor de volta à frente.
 4. Edite o título e o conteúdo. A janela abre centralizada no mesmo monitor do Desk, pode ser arrastada pela barra superior e salva automaticamente, mesmo quando outra nota está selecionada na janela principal.
 5. Use o botão **✕** ou **Escape** para fechar o editor. O leque recolhe após uma pequena pausa ao retirar o mouse; a nota aberta permanece no editor.
-6. Com o leque recolhido, mantenha o botão direito pressionado sobre a faixa de pílulas e arraste para ajustar a altura, mudar de lado ou levar o Desk para outro monitor. Ao soltar, ele se encaixa na lateral da tela onde está o cursor e salva o monitor e a posição.
+6. Mantenha o botão direito pressionado sobre qualquer parte do Desk (faixa de pílulas, abas ou cartas) e arraste para ajustar a altura, mudar de lado ou levar o Desk para outro monitor. Ao soltar, ele se encaixa na lateral da tela onde está o cursor e salva o monitor e a posição.
 
 Também é possível operar o Desk pelo teclado. Com o foco no baralho, **Enter** ou **Espaço** abre e recolhe o leque, e **Escape** o recolhe. Com o leque aberto, use **Tab** ou as setas para percorrer as cartas (a carta com o foco desliza para fora do baralho, como no hover), **Enter** ou **Espaço** para abrir a nota e **Escape** para recolher o leque e devolver o foco ao baralho. O foco atual é indicado por um contorno no baralho e na carta.
 
@@ -207,11 +207,11 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Views/Converters/DeskFilterConverter.cs` | Liga os chips **Todas** e **No Desk** ao estado de filtro do ViewModel. |
 | `DearNotes/Views/DeskWindow.xaml` e `DearNotes/Views/DeskWindow.xaml.cs` | Baralho lateral, cartas do leque, eventos de mouse, mensagens do Windows, posicionamento do editor e ciclo de vida da janela. |
 | `DearNotes/Views/DeskLayoutService.cs` | Estado de posicionamento do Desk: monitor atual, lado, largura, posição vertical, encaixe, passo e altura disponível das cartas do leque, posição da faixa de pílulas e do botão **+**, e persistência da posição. |
-| `DearNotes/Views/DeskDragController.cs` | Arraste do baralho com o botão direito: captura do mouse, deslocamento, escolha do monitor, lado e recuperação de falhas do Win32. |
+| `DearNotes/Views/DeskDragController.cs` | Arraste do Desk com o botão direito, a partir de qualquer parte dele: captura do mouse, deslocamento, escolha do monitor, lado e recuperação de falhas do Win32. |
 | `DearNotes/Views/DeskFanAnimator.cs` | Abertura e recolhimento do leque, entrada das telhas com 45 ms de intervalo, deslize da carta escolhida, transições do baralho e do botão **+**, largura da janela e atraso de recolhimento ao sair do Desk. |
 | `DearNotes/Views/DeskKeyboardNavigator.cs` | Atalhos e navegação por teclado do Desk: abertura e recolhimento do leque, abertura de notas e retorno do foco ao baralho. |
 | `DearNotes/Views/NoteEditorWindow.xaml` e `DearNotes/Views/NoteEditorWindow.xaml.cs` | Janela do editor aberta pelo Desk, com entrada animada na direção do baralho, posicionada no monitor atual e arrastável pela barra superior. |
-| `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, disposição do leque (aba visível, deslize da carta e posição do botão **+**), centralização do editor e posição do arraste. |
+| `DearNotes.Core/Services/DeskGeometry.cs` | Cálculos puros de encaixe, posição vertical normalizada, escolha de lado, disposição do leque (aba visível, deslize da carta, escolha da carta pela posição do ponteiro e posição do botão **+**), centralização do editor e posição do arraste. |
 | `DearNotes.Core/Services/NotesAutoSaver.cs` | Fila de gravação em segundo plano: mantém uma escrita por vez e substitui o snapshot pendente pelo mais recente. |
 | `DearNotes.Core/Services/INoteStore.cs` e `NoteStorage.cs` | Contrato e implementação da leitura, validação, migração do formato antigo, criptografia do envelope e gravação do arquivo de notas. |
 | `DearNotes.Core/Services/INoteEncryption.cs`, `IKeyProvider.cs`, `EncryptedNotePayload.cs` e `AesGcmNoteEncryption.cs` | Contratos de criptografia e de fornecimento da chave, payload cifrado e implementação AES-GCM com nonce, tag e identificador da chave. |
@@ -228,7 +228,7 @@ O repositório é dividido em três projetos: `DearNotes` (aplicativo WPF), `Dea
 | `DearNotes/Services/StorageMigration.cs` | Cópia única dos dados da instalação anterior (`SideNotes`) para a pasta atual. |
 | `DearNotes/Services/WindowFrameService.cs` | Cantos arredondados da janela via DWM e limites de maximização na área útil do monitor via `WM_GETMINMAXINFO`, com degradação silenciosa em versões anteriores do Windows. |
 | `DearNotes/Services/AppLogger.cs` | Registro de falhas inesperadas em arquivo, com rotação por tamanho. |
-| `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, disposição do leque, deslize da carta, botão **+**, editor e arraste. |
+| `DearNotes.Tests/DeskGeometryTests.cs` | Casos de encaixe, DPI, posição relativa, escolha de lado, disposição do leque, deslize e escolha da carta, botão **+**, editor e arraste. |
 | `DearNotes.Tests/NoteStorageTests.cs` e `DeskPositionStoreTests.cs` | Gravação, leitura, validação, migração, criptografia, limites e preservação de arquivos inválidos. |
 | `DearNotes.Tests/AesGcmNoteEncryptionTests.cs` | Ida e volta da criptografia, nonces únicos, adulteração de conteúdo e tag, chave incorreta e tamanhos inválidos. |
 | `DearNotes.Tests/FixedKeyProvider.cs` | Chave fixa usada apenas nos testes para tornar a criptografia determinística e isolada do DPAPI. |

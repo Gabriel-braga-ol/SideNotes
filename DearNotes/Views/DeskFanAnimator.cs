@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -51,6 +52,8 @@ namespace DearNotes.Views
 
         private const int RestingZIndex = 0;
 
+        private const int NoCard = -1;
+
         private readonly DeskViewModel viewModel;
 
         private readonly FrameworkElement deskHandle;
@@ -64,6 +67,8 @@ namespace DearNotes.Views
         private readonly Func<bool> isPointerInsideDesk;
 
         private readonly Func<bool> isDragging;
+
+        private readonly Func<Point, int, int> findChosenCard;
 
         private readonly DispatcherTimer proximityTimer =
             new()
@@ -87,6 +92,8 @@ namespace DearNotes.Views
         // da que ainda está voltando ao lugar.
         private int slideZIndex = RestingZIndex;
 
+        private int chosenIndex = NoCard;
+
         public DeskFanAnimator(
             DeskViewModel viewModel,
             FrameworkElement deskHandle,
@@ -94,7 +101,8 @@ namespace DearNotes.Views
             FrameworkElement addNoteButton,
             Action<double> setDeskWidth,
             Func<bool> isPointerInsideDesk,
-            Func<bool> isDragging)
+            Func<bool> isDragging,
+            Func<Point, int, int> findChosenCard)
         {
             this.viewModel = viewModel;
             this.deskHandle = deskHandle;
@@ -103,6 +111,7 @@ namespace DearNotes.Views
             this.setDeskWidth = setDeskWidth;
             this.isPointerInsideDesk = isPointerInsideDesk;
             this.isDragging = isDragging;
+            this.findChosenCard = findChosenCard;
 
             proximityTimer.Tick += ProximityTimer_Tick;
             collapseTimer.Tick += CollapseTimer_Tick;
@@ -120,11 +129,22 @@ namespace DearNotes.Views
             proximityTimer.Start();
         }
 
+        /// <summary>
+        /// Item da carta que está fora do baralho, ou nulo. O clique abre essa
+        /// nota mesmo que outra carta ainda esteja voltando sob o ponteiro.
+        /// </summary>
+        public object? ChosenItem =>
+            chosenIndex >= 0 && chosenIndex < fanCards.Items.Count
+                ? fanCards.Items[chosenIndex]
+                : null;
+
         public void HandleMouseLeave()
         {
             proximityTimer.Stop();
 
             if (isDragging()) return;
+
+            if (CanChooseCard()) ChooseCard(NoCard);
 
             if (!viewModel.IsExpanded &&
                 fanCards.Visibility == Visibility.Collapsed)
@@ -202,16 +222,33 @@ namespace DearNotes.Views
         }
 
         /// <summary>
-        /// Tira a carta do baralho enquanto ela está sob o ponteiro ou com o
-        /// foco do teclado, e a devolve ao lugar quando deixa de estar.
+        /// Escolhe a carta pela posição do ponteiro no leque, conforme a
+        /// geometria fixa das abas, e não pela carta que está sob ele.
         /// </summary>
-        public void UpdateCardSlide(FrameworkElement noteCard)
+        public void HandlePointerMove(Point pointerPosition)
         {
-            if (!viewModel.IsExpanded || isFanSettling || isDragging()) return;
+            if (!CanChooseCard()) return;
 
-            bool chosen = noteCard.IsMouseOver || noteCard.IsKeyboardFocused;
+            ChooseCard(findChosenCard(pointerPosition, chosenIndex));
+        }
 
-            SlideCard(noteCard, chosen);
+        /// <summary>
+        /// A carta com o foco do teclado sai do baralho como no hover.
+        /// </summary>
+        public void HandleCardFocusChanged(FrameworkElement noteCard)
+        {
+            if (!CanChooseCard()) return;
+
+            int index = IndexOfCard(noteCard);
+
+            if (noteCard.IsKeyboardFocused)
+            {
+                ChooseCard(index);
+            }
+            else if (index == chosenIndex)
+            {
+                ChooseCard(NoCard);
+            }
         }
 
         public void Detach()
@@ -326,14 +363,57 @@ namespace DearNotes.Views
 
             isFanSettling = false;
 
-            foreach (FrameworkElement card in GetCards())
+            if (FindFocusedCardIndex() is int focusedIndex)
             {
-                if (FindNoteCard(card) is FrameworkElement noteCard &&
-                    (noteCard.IsMouseOver || noteCard.IsKeyboardFocused))
+                ChooseCard(focusedIndex);
+            }
+            else if (isPointerInsideDesk())
+            {
+                HandlePointerMove(Mouse.GetPosition(fanCards));
+            }
+        }
+
+        private int? FindFocusedCardIndex()
+        {
+            List<FrameworkElement> cards = GetCards();
+
+            for (int i = 0; i < cards.Count; i++)
+            {
+                if (FindNoteCard(cards[i]) is { IsKeyboardFocused: true })
                 {
-                    SlideCard(noteCard, chosen: true);
+                    return i;
                 }
             }
+
+            return null;
+        }
+
+        private bool CanChooseCard()
+        {
+            return viewModel.IsExpanded && !isFanSettling && !isDragging();
+        }
+
+        private void ChooseCard(int index)
+        {
+            if (index == chosenIndex) return;
+
+            int previousIndex = chosenIndex;
+
+            chosenIndex = index;
+
+            SlideCard(previousIndex, chosen: false);
+            SlideCard(index, chosen: true);
+        }
+
+        private int IndexOfCard(FrameworkElement noteCard)
+        {
+            if (ItemsControl.ContainerFromElement(fanCards, noteCard)
+                    is not DependencyObject container)
+            {
+                return NoCard;
+            }
+
+            return fanCards.ItemContainerGenerator.IndexFromContainer(container);
         }
 
         private void ShowAddButton(int delayMilliseconds)
@@ -383,17 +463,14 @@ namespace DearNotes.Views
                 EasingMode = EasingMode.EaseIn
             };
 
+            ChooseCard(NoCard);
+
             for (int i = 0; i < cards.Count; i++)
             {
                 // A primeira carta é a última a terminar; ela fecha o recolhimento.
                 Action? completed = i == 0
                     ? () => FinishCollapse(version)
                     : null;
-
-                if (FindNoteCard(cards[i]) is FrameworkElement noteCard)
-                {
-                    SlideCard(noteCard, chosen: false);
-                }
 
                 StageElement(
                     cards[i],
@@ -427,10 +504,10 @@ namespace DearNotes.Views
             setDeskWidth(DeskGeometry.CollapsedWidth);
         }
 
-        private void SlideCard(FrameworkElement noteCard, bool chosen)
+        private void SlideCard(int index, bool chosen)
         {
-            if (ItemsControl.ContainerFromElement(fanCards, noteCard)
-                    is not UIElement container)
+            if (GetCard(index) is not FrameworkElement container ||
+                FindNoteCard(container) is not FrameworkElement noteCard)
             {
                 return;
             }
@@ -453,7 +530,7 @@ namespace DearNotes.Views
             else
             {
                 animation.Completed += (_, _) =>
-                    LowerCardWhenReleased(noteCard, container);
+                    LowerCardWhenReleased(index, container);
             }
 
             translate.BeginAnimation(
@@ -491,11 +568,9 @@ namespace DearNotes.Views
             };
         }
 
-        private static void LowerCardWhenReleased(
-            FrameworkElement noteCard,
-            UIElement container)
+        private void LowerCardWhenReleased(int index, UIElement container)
         {
-            if (noteCard.IsMouseOver || noteCard.IsKeyboardFocused) return;
+            if (index == chosenIndex) return;
 
             Panel.SetZIndex(container, RestingZIndex);
         }
@@ -524,6 +599,8 @@ namespace DearNotes.Views
 
         private FrameworkElement? GetCard(int index)
         {
+            if (index < 0 || index >= fanCards.Items.Count) return null;
+
             return fanCards.ItemContainerGenerator
                 .ContainerFromIndex(index) as FrameworkElement;
         }
@@ -666,6 +743,7 @@ namespace DearNotes.Views
         private void ResetCardAnimations()
         {
             isFanSettling = false;
+            chosenIndex = NoCard;
             slideZIndex = RestingZIndex;
 
             foreach (FrameworkElement card in GetCards())
